@@ -139,6 +139,23 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
         return ""
 
 
+def default_gregorian_date(now: Optional[datetime] = None) -> str:
+    """تاریخ پیش‌فرض را به صورت YYYY-MM-DD برمی‌گرداند."""
+    now = now or datetime.now()
+    return now.strftime("%Y-%m-%d")
+
+
+def default_jalali_date(now: Optional[datetime] = None) -> str:
+    """تاریخ پیش‌فرض را به صورت شمسی YYYY/MM/DD برمی‌گرداند."""
+    return gregorian_str_to_jalali_str(default_gregorian_date(now))
+
+
+def default_time_value(now: Optional[datetime] = None) -> str:
+    """ساعت پیش‌فرض را به صورت HH:MM:SS برمی‌گرداند."""
+    now = now or datetime.now()
+    return now.strftime("%H:%M:%S")
+
+
 def normalize_time(text: str) -> str:
     """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
     text = (text or "").strip()

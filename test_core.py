@@ -39,6 +39,14 @@ def test_normalize_time_code():
     print("OK time/code")
 
 
+def test_default_date_time_formats():
+    now = ac.datetime(2026, 6, 22, 7, 39, 23)
+    assert ac.default_gregorian_date(now) == "2026-06-22"
+    assert ac.default_jalali_date(now) == "1405/04/01"
+    assert ac.default_time_value(now) == "07:39:23"
+    print("OK default date/time formats")
+
+
 def test_parse_line():
     line = "   308590\t2026-06-22 07:12:45\t1\t0\t1\t0"
     rec = ac.parse_line(line)
@@ -94,6 +102,7 @@ if __name__ == "__main__":
     test_jalali_roundtrip()
     test_normalize_date()
     test_normalize_time_code()
+    test_default_date_time_formats()
     test_parse_line()
     test_to_line_roundtrip()
     test_read_write()

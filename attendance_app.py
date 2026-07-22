@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 import sys
 import tkinter as tk
+from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
 import attendance_core as ac
@@ -63,6 +64,7 @@ class AttendanceApp:
 
         self.records: list[ac.Record] = []
         self.source_path: str | None = None
+        self.last_save_path: str | None = None
         self.dirty = False
         # نگاشت رکورد -> شناسهٔ ردیف در جدول اصلی
         self._row_of_record: dict[int, str] = {}
@@ -130,6 +132,7 @@ class AttendanceApp:
         self._clear_container()
         self.records = []
         self.source_path = None
+        self.last_save_path = None
         self.dirty = False
 
         wrap = tk.Frame(self.container, bg=BG)
@@ -232,6 +235,7 @@ class AttendanceApp:
             return
         self.records = records
         self.source_path = path
+        self.last_save_path = None
         self.dirty = False
         self.show_editor_screen()
 
@@ -293,10 +297,10 @@ class AttendanceApp:
         code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)")
         code_box.pack(side="right", padx=8)
 
-        date_box, self.date_entry = field(row, "تاریخ (سال-ماه-روز)")
+        date_box, self.date_entry = field(row, "تاریخ (yyyy-mm-dd یا yyyy/mm/dd)")
         date_box.pack(side="right", padx=8)
 
-        time_box, self.time_entry = field(row, "ساعت (HH:MM:SS)")
+        time_box, self.time_entry = field(row, "ساعت (hh:mm:ss)")
         time_box.pack(side="right", padx=8)
 
         # گزینهٔ تاریخ شمسی
@@ -324,6 +328,7 @@ class AttendanceApp:
         )
         self.date_hint.pack(anchor="e", padx=14, pady=(0, 4))
         self._update_date_hint()
+        self._set_default_form_values(force_date=True, force_time=True)
 
         # دکمهٔ ثبت (پایین فرم)
         submit = self._button(form, "ثبت رکورد", self._on_submit, bg=GOOD)
@@ -386,6 +391,9 @@ class AttendanceApp:
         exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
         exit_btn.pack(side="left", padx=(0, 8))
 
+        save_btn = self._button(footer, "ذخیره", self._on_save, bg=GOOD)
+        save_btn.pack(side="left", padx=(0, 8))
+
         save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
         save_btn.pack(side="left")
 
@@ -413,8 +421,55 @@ class AttendanceApp:
     def _update_date_hint(self):
         if self.jalali_var.get():
             self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
+            self._convert_date_entry_to_jalali()
         else:
             self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+            self._convert_date_entry_to_gregorian()
+
+    def _default_date_value(self, jalali: bool) -> str:
+        now = datetime.now()
+        if not jalali:
+            return now.strftime("%Y-%m-%d")
+        jy, jm, jd = ac.gregorian_to_jalali(now.year, now.month, now.day)
+        return f"{jy:04d}/{jm:02d}/{jd:02d}"
+
+    def _default_time_value(self) -> str:
+        return datetime.now().strftime("%H:%M:%S")
+
+    def _set_default_form_values(self, force_date: bool, force_time: bool):
+        if force_date:
+            self.date_entry.delete(0, "end")
+            self.date_entry.insert(0, self._default_date_value(self.jalali_var.get()))
+        if force_time:
+            self.time_entry.delete(0, "end")
+            self.time_entry.insert(0, self._default_time_value())
+
+    def _convert_date_entry_to_jalali(self):
+        text = self.date_entry.get().strip()
+        if not text:
+            self.date_entry.insert(0, self._default_date_value(jalali=True))
+            return
+        try:
+            g = ac.normalize_date(text, jalali=False)
+            y, m, d = [int(x) for x in g.split("-")]
+            jy, jm, jd = ac.gregorian_to_jalali(y, m, d)
+            new_text = f"{jy:04d}/{jm:02d}/{jd:02d}"
+        except ValueError:
+            return
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(0, new_text)
+
+    def _convert_date_entry_to_gregorian(self):
+        text = self.date_entry.get().strip()
+        if not text:
+            self.date_entry.insert(0, self._default_date_value(jalali=False))
+            return
+        try:
+            new_text = ac.normalize_date(text, jalali=True)
+        except ValueError:
+            return
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(0, new_text)
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -474,8 +529,29 @@ class AttendanceApp:
             self.tree.see(item)
 
         # پاک کردن فیلدها برای ورودی بعدی (کد و تاریخ نگه داشته می‌شوند برای سرعت)
-        self.time_entry.delete(0, "end")
+        self._set_default_form_values(force_date=False, force_time=True)
         self.code_entry.focus_set()
+
+    def _save_records(self, path: str):
+        ordered = sorted(self.records, key=lambda r: r.sort_key)
+        ac.write_records(path, ordered)
+        self.last_save_path = path
+        self.dirty = False
+        self._update_status()
+        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+
+    def _on_save(self):
+        if not self.records:
+            messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
+            return
+        # اگر قبلاً Save As انجام نشده، مسیر فایل مقصد نامشخص است.
+        if not self.last_save_path:
+            self._on_save_as()
+            return
+        try:
+            self._save_records(self.last_save_path)
+        except Exception as exc:  # pragma: no cover
+            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
 
     def _on_save_as(self):
         if not self.records:
@@ -504,15 +580,10 @@ class AttendanceApp:
                 "آیا مطمئن هستید که می‌خواهید فایل اصلی بازنویسی شود؟",
             ):
                 return
-        ordered = sorted(self.records, key=lambda r: r.sort_key)
         try:
-            ac.write_records(path, ordered)
+            self._save_records(path)
         except Exception as exc:  # pragma: no cover
             messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
-            return
-        self.dirty = False
-        self._update_status()
-        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
 
     def _on_exit(self):
         """بازگشت به حالت اولیه (کادر کشیدن و رها کردن)."""
@@ -525,7 +596,7 @@ class AttendanceApp:
             if answer is None:
                 return
             if answer:
-                self._on_save_as()
+                self._on_save()
                 if self.dirty:  # کاربر ذخیره را لغو کرد
                     return
         self.show_drop_screen()

@@ -114,16 +114,33 @@ def _split_date(text: str):
     return y, m, d
 
 
+def _split_date_with_separator(text: str, separator: str, label: str):
+    """
+    جدا کردن و اعتبارسنجی تاریخ با جداکننده مشخص.
+    Split and validate a date string with an exact separator.
+    """
+    text = (text or "").strip()
+    parts = text.split(separator)
+    if len(parts) != 3 or any(p == "" for p in parts):
+        raise ValueError(f"قالب تاریخ {label} باید باشد")
+    if not all(p.isdigit() for p in parts):
+        raise ValueError("اجزای تاریخ باید عددی باشند")
+    year, month, day = parts
+    if len(year) != 4 or len(month) != 2 or len(day) != 2:
+        raise ValueError(f"قالب تاریخ {label} باید باشد")
+    return int(year), int(month), int(day)
+
+
 def normalize_date(text: str, jalali: bool) -> str:
     """
     ورودی تاریخ را (شمسی یا میلادی) گرفته و تاریخ میلادی به صورت YYYY-MM-DD برمی‌گرداند.
     Take a date string (Jalali or Gregorian) and return Gregorian YYYY-MM-DD.
     """
-    y, m, d = _split_date(text)
     if jalali:
+        y, m, d = _split_date_with_separator(text, "/", "YYYY/MM/DD")
         gy, gm, gd = jalali_to_gregorian(y, m, d)
     else:
-        gy, gm, gd = y, m, d
+        gy, gm, gd = _split_date_with_separator(text, "-", "YYYY-MM-DD")
     # اعتبارسنجی نهایی با datetime
     dt = datetime(gy, gm, gd)
     return dt.strftime("%Y-%m-%d")
@@ -140,15 +157,13 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
 
 
 def normalize_time(text: str) -> str:
-    """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
+    """زمان را با قالب اجباری HH:MM:SS استاندارد می‌کند."""
     text = (text or "").strip()
     if not text:
         raise ValueError("ساعت را وارد کنید")
     parts = text.split(":")
-    if len(parts) == 2:
-        parts.append("0")
     if len(parts) != 3:
-        raise ValueError("قالب ساعت باید HH:MM:SS باشد (مثال: 07:39:23)")
+        raise ValueError("قالب ساعت باید hh:mm:ss باشد (مثال: 07:39:23)")
     try:
         h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError:

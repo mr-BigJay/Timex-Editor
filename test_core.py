@@ -19,16 +19,35 @@ def test_jalali_roundtrip():
 
 
 def test_normalize_date():
+    # قالب سخت‌گیرانه: میلادی فقط با «-»، شمسی فقط با «/»
     assert ac.normalize_date("2026-06-22", jalali=False) == "2026-06-22"
-    assert ac.normalize_date("2026/06/22", jalali=False) == "2026-06-22"
     assert ac.normalize_date("1405/04/01", jalali=True) == "2026-06-22"
-    assert ac.normalize_date("1405-4-1", jalali=True) == "2026-06-22"
+
+    for bad_g in ["2026/06/22", "26-06-22", "2026-6-22", "2026-06-2"]:
+        try:
+            ac.normalize_date(bad_g, jalali=False)
+            assert False, "should have failed (gregorian): " + bad_g
+        except ValueError:
+            pass
+
+    for bad_j in ["1405-04-01", "405/04/01", "1405/4/1"]:
+        try:
+            ac.normalize_date(bad_j, jalali=True)
+            assert False, "should have failed (jalali): " + bad_j
+        except ValueError:
+            pass
     print("OK normalize date")
 
 
 def test_normalize_time_code():
-    assert ac.normalize_time("7:39:23") == "07:39:23"
-    assert ac.normalize_time("07:39") == "07:39:00"
+    assert ac.normalize_time("07:39:23") == "07:39:23"
+    # قالب سخت‌گیرانه: hh:mm:ss دقیق
+    for bad in ["7:39:23", "07:39", "07:39:2", "abc:de:fg"]:
+        try:
+            ac.normalize_time(bad)
+            assert False, "should have failed: " + bad
+        except ValueError:
+            pass
     assert ac.normalize_code("308590") == "308590"
     for bad in ["30859", "3085900", "abcdef"]:
         try:

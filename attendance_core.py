@@ -95,15 +95,26 @@ def jalali_to_gregorian(jy: int, jm: int, jd: int):
 # کمکی‌های اعتبارسنجی و نرمال‌سازی ورودی‌ها
 # Validation / normalization helpers
 # ---------------------------------------------------------------------------
-def _split_date(text: str):
-    """جدا کردن اجزای تاریخ که با - یا / یا . نوشته شده باشد."""
+def _split_date(text: str, allowed_sep: Optional[str] = None):
+    """جدا کردن اجزای تاریخ.
+
+    اگر ``allowed_sep`` مشخص شود، فقط همان جداکننده پذیرفته می‌شود.
+    در غیر این صورت هر یک از -، /، . قابل قبول است (برای خواندن فایل).
+    """
     text = (text or "").strip()
-    for sep in ("-", "/", "."):
-        if sep in text:
-            parts = text.split(sep)
-            break
+    if allowed_sep is not None:
+        if allowed_sep not in text:
+            raise ValueError(
+                f"قالب تاریخ نامعتبر است. جداکنندهٔ مجاز «{allowed_sep}» است."
+            )
+        parts = text.split(allowed_sep)
     else:
-        parts = text.split()
+        for sep in ("-", "/", "."):
+            if sep in text:
+                parts = text.split(sep)
+                break
+        else:
+            parts = text.split()
     parts = [p for p in parts if p != ""]
     if len(parts) != 3:
         raise ValueError("قالب تاریخ باید سال-ماه-روز باشد (مثال: 2026-06-22)")
@@ -114,17 +125,38 @@ def _split_date(text: str):
     return y, m, d
 
 
+# قالب‌های استاندارد ورود کاربر
+GREGORIAN_DATE_FORMAT = "yyyy-mm-dd"
+JALALI_DATE_FORMAT = "yyyy/mm/dd"
+TIME_FORMAT = "hh:mm:ss"
+
+
+def _check_strict_date_format(text: str, sep: str) -> None:
+    """اعتبارسنجی سخت‌گیرانهٔ قالب تاریخ کاربر: سال ۴ رقم، ماه/روز ۲ رقم."""
+    text = (text or "").strip()
+    parts = text.split(sep)
+    if len(parts) != 3 or len(parts[0]) != 4 or len(parts[1]) != 2 or len(parts[2]) != 2:
+        fmt = "yyyy" + sep + "mm" + sep + "dd"
+        raise ValueError(f"قالب تاریخ باید دقیقاً به شکل {fmt} باشد")
+    if not (parts[0].isdigit() and parts[1].isdigit() and parts[2].isdigit()):
+        raise ValueError("اجزای تاریخ باید عددی باشند")
+
+
 def normalize_date(text: str, jalali: bool) -> str:
     """
     ورودی تاریخ را (شمسی یا میلادی) گرفته و تاریخ میلادی به صورت YYYY-MM-DD برمی‌گرداند.
-    Take a date string (Jalali or Gregorian) and return Gregorian YYYY-MM-DD.
+
+    قالب سخت‌گیرانه:
+      * میلادی: ``yyyy-mm-dd`` (فقط جداکنندهٔ «-»).
+      * شمسی: ``yyyy/mm/dd`` (فقط جداکنندهٔ «/»).
     """
-    y, m, d = _split_date(text)
+    sep = "/" if jalali else "-"
+    _check_strict_date_format(text, sep)
+    y, m, d = _split_date(text, allowed_sep=sep)
     if jalali:
         gy, gm, gd = jalali_to_gregorian(y, m, d)
     else:
         gy, gm, gd = y, m, d
-    # اعتبارسنجی نهایی با datetime
     dt = datetime(gy, gm, gd)
     return dt.strftime("%Y-%m-%d")
 
@@ -140,19 +172,17 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
 
 
 def normalize_time(text: str) -> str:
-    """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
+    """زمان را به صورت دقیقاً ``hh:mm:ss`` استاندارد می‌کند.
+
+    قالب سخت‌گیرانه: سه بخش دو رقمی که با «:» از هم جدا شده‌اند.
+    """
     text = (text or "").strip()
     if not text:
         raise ValueError("ساعت را وارد کنید")
     parts = text.split(":")
-    if len(parts) == 2:
-        parts.append("0")
-    if len(parts) != 3:
-        raise ValueError("قالب ساعت باید HH:MM:SS باشد (مثال: 07:39:23)")
-    try:
-        h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
-    except ValueError:
-        raise ValueError("اجزای ساعت باید عددی باشند")
+    if len(parts) != 3 or any(len(p) != 2 or not p.isdigit() for p in parts):
+        raise ValueError("قالب ساعت باید دقیقاً به شکل hh:mm:ss باشد (مثال: 07:39:23)")
+    h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
     if not (0 <= h < 24 and 0 <= mi < 60 and 0 <= s < 60):
         raise ValueError("مقدار ساعت خارج از محدوده مجاز است")
     return f"{h:02d}:{mi:02d}:{s:02d}"

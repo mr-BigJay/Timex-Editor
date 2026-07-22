@@ -47,7 +47,9 @@ ACCENT = "#2563eb"
 ACCENT_HOVER = "#1d4ed8"
 TEXT = "#e2e8f0"
 MUTED = "#94a3b8"
+PLACEHOLDER = "#64748b"
 GOOD = "#16a34a"
+GOOD_HOVER = "#15803d"
 DANGER = "#dc2626"
 HILITE = "#374151"
 ADDED_BG = "#14532d"
@@ -123,6 +125,56 @@ class AttendanceApp:
     def _clear_container(self):
         for child in self.container.winfo_children():
             child.destroy()
+
+    # -------------------------------------------------------- placeholder API
+    def _set_placeholder(self, entry: tk.Entry, text: str) -> None:
+        """افزودن یک راهنمای (placeholder) خاکستری به یک Entry.
+
+        متن راهنما در حالت تهی نمایش داده شده و با کلیک/تایپ ناپدید می‌شود.
+        """
+        entry._placeholder = text  # type: ignore[attr-defined]
+        entry._placeholder_active = False  # type: ignore[attr-defined]
+
+        def show():
+            if not entry.get():
+                entry.insert(0, text)
+                entry.configure(fg=PLACEHOLDER)
+                entry._placeholder_active = True  # type: ignore[attr-defined]
+
+        def hide():
+            if getattr(entry, "_placeholder_active", False):
+                entry.delete(0, "end")
+                entry.configure(fg=TEXT)
+                entry._placeholder_active = False  # type: ignore[attr-defined]
+
+        def on_focus_in(_event):
+            hide()
+
+        def on_focus_out(_event):
+            show()
+
+        entry.bind("<FocusIn>", on_focus_in)
+        entry.bind("<FocusOut>", on_focus_out)
+        show()
+
+    def _entry_value(self, entry: tk.Entry) -> str:
+        """مقدار کاربر را برمی‌گرداند و متن راهنما را نادیده می‌گیرد."""
+        if getattr(entry, "_placeholder_active", False):
+            return ""
+        return entry.get()
+
+    def _set_entry_value(self, entry: tk.Entry, value: str) -> None:
+        entry.delete(0, "end")
+        if value:
+            entry.configure(fg=TEXT)
+            entry.insert(0, value)
+            entry._placeholder_active = False  # type: ignore[attr-defined]
+        else:
+            placeholder = getattr(entry, "_placeholder", "")
+            if placeholder:
+                entry.insert(0, placeholder)
+                entry.configure(fg=PLACEHOLDER)
+                entry._placeholder_active = True  # type: ignore[attr-defined]
 
     # ============================================================ DROP SCREEN
     def show_drop_screen(self):
@@ -241,7 +293,7 @@ class AttendanceApp:
 
         # نوار عنوان فایل
         header = tk.Frame(self.container, bg=BG)
-        header.pack(fill="x", padx=16, pady=(12, 4))
+        header.pack(side="top", fill="x", padx=16, pady=(12, 4))
         tk.Label(
             header,
             text="فایل باز شده:",
@@ -257,6 +309,30 @@ class AttendanceApp:
             font=("Segoe UI", 10, "bold"),
         ).pack(side="right", padx=(0, 6))
 
+        # نوار پایین ابتدا با side="bottom" پک می‌شود تا هرگز از دید خارج نشود.
+        footer = tk.Frame(self.container, bg=BG)
+        footer.pack(side="bottom", fill="x", padx=16, pady=(4, 14))
+
+        self.status_lbl = tk.Label(
+            footer,
+            text="",
+            bg=BG,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        )
+        self.status_lbl.pack(side="right")
+
+        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
+        exit_btn.pack(side="left", padx=(0, 8))
+
+        save_as_btn = self._button(
+            footer, "ذخیره به عنوان (Save As)", self._on_save_as, bg=ACCENT
+        )
+        save_as_btn.pack(side="left", padx=(0, 8))
+
+        save_btn = self._button(footer, "ذخیره (Save)", self._on_save, bg=GOOD)
+        save_btn.pack(side="left")
+
         # ---------------------------------------------------------- فرم ثبت
         form = tk.LabelFrame(
             self.container,
@@ -268,12 +344,12 @@ class AttendanceApp:
             relief="solid",
             labelanchor="ne",
         )
-        form.pack(fill="x", padx=16, pady=6)
+        form.pack(side="top", fill="x", padx=16, pady=6)
 
         row = tk.Frame(form, bg=PANEL)
         row.pack(fill="x", padx=12, pady=10)
 
-        def field(parent, label):
+        def field(parent, label, placeholder):
             box = tk.Frame(parent, bg=PANEL)
             tk.Label(box, text=label, bg=PANEL, fg=MUTED, font=("Segoe UI", 10)).pack(anchor="e")
             entry = tk.Entry(
@@ -284,19 +360,24 @@ class AttendanceApp:
                 relief="flat",
                 font=("Segoe UI", 12),
                 justify="center",
-                width=16,
+                width=18,
             )
             entry.pack(pady=(4, 0), ipady=5)
+            self._set_placeholder(entry, placeholder)
             return box, entry
 
         # از راست به چپ: کد، تاریخ، ساعت
-        code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)")
+        code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)", "123456")
         code_box.pack(side="right", padx=8)
 
-        date_box, self.date_entry = field(row, "تاریخ (سال-ماه-روز)")
+        # قالب پیش‌فرض تاریخ: میلادی yyyy-mm-dd
+        date_box, self.date_entry = field(
+            row, "تاریخ میلادی (yyyy-mm-dd)", ac.GREGORIAN_DATE_FORMAT
+        )
         date_box.pack(side="right", padx=8)
+        self.date_label = date_box.winfo_children()[0]
 
-        time_box, self.time_entry = field(row, "ساعت (HH:MM:SS)")
+        time_box, self.time_entry = field(row, "ساعت (hh:mm:ss)", ac.TIME_FORMAT)
         time_box.pack(side="right", padx=8)
 
         # گزینهٔ تاریخ شمسی
@@ -305,7 +386,7 @@ class AttendanceApp:
             row,
             text="ورود تاریخ به صورت شمسی",
             variable=self.jalali_var,
-            command=self._update_date_hint,
+            command=self._on_jalali_toggle,
             bg=PANEL,
             fg=TEXT,
             selectcolor=BG,
@@ -343,7 +424,7 @@ class AttendanceApp:
             relief="solid",
             labelanchor="ne",
         )
-        added_frame.pack(fill="x", padx=16, pady=6)
+        added_frame.pack(side="top", fill="x", padx=16, pady=6)
 
         self.added_tree = self._make_tree(added_frame, height=4, added_style=True)
         self.added_tree.pack(fill="x", padx=8, pady=8)
@@ -359,7 +440,7 @@ class AttendanceApp:
             relief="solid",
             labelanchor="ne",
         )
-        list_frame.pack(fill="both", expand=True, padx=16, pady=6)
+        list_frame.pack(side="top", fill="both", expand=True, padx=16, pady=6)
 
         tree_wrap = tk.Frame(list_frame, bg=PANEL)
         tree_wrap.pack(fill="both", expand=True, padx=8, pady=8)
@@ -369,25 +450,6 @@ class AttendanceApp:
         self.tree.configure(yscrollcommand=vsb.set)
         vsb.pack(side="left", fill="y")
         self.tree.pack(side="right", fill="both", expand=True)
-
-        # ------------------------------------------------------- نوار پایین
-        footer = tk.Frame(self.container, bg=BG)
-        footer.pack(fill="x", padx=16, pady=(4, 14))
-
-        self.status_lbl = tk.Label(
-            footer,
-            text="",
-            bg=BG,
-            fg=MUTED,
-            font=("Segoe UI", 10),
-        )
-        self.status_lbl.pack(side="right")
-
-        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
-        exit_btn.pack(side="left", padx=(0, 8))
-
-        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
-        save_btn.pack(side="left")
 
         self._render_all()
         self.code_entry.focus_set()
@@ -412,9 +474,26 @@ class AttendanceApp:
 
     def _update_date_hint(self):
         if self.jalali_var.get():
-            self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
+            self.date_hint.config(
+                text="قالب شمسی: yyyy/mm/dd (مثال: 1405/04/01) ← هنگام ذخیره به میلادی تبدیل می‌شود"
+            )
         else:
-            self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+            self.date_hint.config(
+                text="قالب میلادی: yyyy-mm-dd (مثال: 2026-06-22)"
+            )
+
+    def _on_jalali_toggle(self):
+        """با تغییر حالت شمسی/میلادی، برچسب و راهنمای فیلد تاریخ به‌روز شود."""
+        if self.jalali_var.get():
+            self.date_label.config(text="تاریخ شمسی (yyyy/mm/dd)")
+            new_placeholder = ac.JALALI_DATE_FORMAT
+        else:
+            self.date_label.config(text="تاریخ میلادی (yyyy-mm-dd)")
+            new_placeholder = ac.GREGORIAN_DATE_FORMAT
+        self.date_entry._placeholder = new_placeholder  # type: ignore[attr-defined]
+        if getattr(self.date_entry, "_placeholder_active", False):
+            self._set_entry_value(self.date_entry, "")
+        self._update_date_hint()
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -451,9 +530,11 @@ class AttendanceApp:
     # ------------------------------------------------------------------ actions
     def _on_submit(self):
         try:
-            code = ac.normalize_code(self.code_entry.get())
-            date = ac.normalize_date(self.date_entry.get(), jalali=self.jalali_var.get())
-            time = ac.normalize_time(self.time_entry.get())
+            code = ac.normalize_code(self._entry_value(self.code_entry))
+            date = ac.normalize_date(
+                self._entry_value(self.date_entry), jalali=self.jalali_var.get()
+            )
+            time = ac.normalize_time(self._entry_value(self.time_entry))
         except ValueError as exc:
             messagebox.showwarning(APP_TITLE, str(exc))
             return
@@ -462,20 +543,45 @@ class AttendanceApp:
         self.records.append(rec)
         self.dirty = True
 
-        # بازسازی لیست اصلی و افزودن به لیست موارد اضافه‌شده
         self._render_all()
         self._append_added_row(rec)
 
-        # اسکرول ریل‌تایم به محل رکورد تازه در لیست اصلی + انتخاب و برجسته‌سازی
         item = self._row_of_record.get(id(rec))
         if item:
             self.tree.selection_set(item)
             self.tree.focus(item)
             self.tree.see(item)
 
-        # پاک کردن فیلدها برای ورودی بعدی (کد و تاریخ نگه داشته می‌شوند برای سرعت)
-        self.time_entry.delete(0, "end")
+        self._set_entry_value(self.time_entry, "")
         self.code_entry.focus_set()
+
+    def _write_to(self, path: str) -> bool:
+        """نوشتن رکوردهای مرتب‌شده در مسیر ``path``. در صورت خطا پیام می‌دهد."""
+        ordered = sorted(self.records, key=lambda r: r.sort_key)
+        try:
+            ac.write_records(path, ordered)
+        except Exception as exc:  # pragma: no cover
+            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
+            return False
+        self.dirty = False
+        self._update_status()
+        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+        return True
+
+    def _on_save(self):
+        """ذخیره روی همان فایل باز شده (با تأیید کاربر برای بازنویسی)."""
+        if not self.records:
+            messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
+            return
+        if not self.source_path:
+            self._on_save_as()
+            return
+        if not messagebox.askyesno(
+            APP_TITLE,
+            "این کار فایل اصلی را بازنویسی می‌کند.\nآیا مطمئن هستید؟",
+        ):
+            return
+        self._write_to(self.source_path)
 
     def _on_save_as(self):
         if not self.records:
@@ -488,7 +594,7 @@ class AttendanceApp:
         )
         initial_file = os.path.basename(ac.suggested_save_path(self.source_path or ""))
         path = filedialog.asksaveasfilename(
-            title="ذخیره به صورت (Save As)",
+            title="ذخیره به عنوان (Save As)",
             initialdir=initial_dir,
             initialfile=initial_file,
             defaultextension=".txt",
@@ -496,7 +602,6 @@ class AttendanceApp:
         )
         if not path:
             return
-        # جلوگیری از بازنویسی فایل اصلی
         if self.source_path and os.path.abspath(path) == os.path.abspath(self.source_path):
             if not messagebox.askyesno(
                 APP_TITLE,
@@ -504,15 +609,7 @@ class AttendanceApp:
                 "آیا مطمئن هستید که می‌خواهید فایل اصلی بازنویسی شود؟",
             ):
                 return
-        ordered = sorted(self.records, key=lambda r: r.sort_key)
-        try:
-            ac.write_records(path, ordered)
-        except Exception as exc:  # pragma: no cover
-            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
-            return
-        self.dirty = False
-        self._update_status()
-        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+        self._write_to(path)
 
     def _on_exit(self):
         """بازگشت به حالت اولیه (کادر کشیدن و رها کردن)."""

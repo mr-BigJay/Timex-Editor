@@ -129,6 +129,15 @@ def normalize_date(text: str, jalali: bool) -> str:
     return dt.strftime("%Y-%m-%d")
 
 
+def default_date(jalali: bool = False, now: Optional[datetime] = None) -> str:
+    """Return today's date in the required default display format."""
+    now = now or datetime.now()
+    if jalali:
+        jy, jm, jd = gregorian_to_jalali(now.year, now.month, now.day)
+        return f"{jy:04d}/{jm:02d}/{jd:02d}"
+    return now.strftime("%Y-%m-%d")
+
+
 def gregorian_str_to_jalali_str(date_str: str) -> str:
     """YYYY-MM-DD میلادی -> رشته شمسی YYYY/MM/DD برای نمایش."""
     try:
@@ -156,6 +165,12 @@ def normalize_time(text: str) -> str:
     if not (0 <= h < 24 and 0 <= mi < 60 and 0 <= s < 60):
         raise ValueError("مقدار ساعت خارج از محدوده مجاز است")
     return f"{h:02d}:{mi:02d}:{s:02d}"
+
+
+def default_time(now: Optional[datetime] = None) -> str:
+    """Return the current time in HH:MM:SS format."""
+    now = now or datetime.now()
+    return now.strftime("%H:%M:%S")
 
 
 def normalize_code(text: str) -> str:

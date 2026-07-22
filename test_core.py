@@ -3,6 +3,7 @@
 
 import os
 import tempfile
+from datetime import datetime
 
 import attendance_core as ac
 
@@ -37,6 +38,14 @@ def test_normalize_time_code():
         except ValueError:
             pass
     print("OK time/code")
+
+
+def test_default_datetime_formats():
+    now = datetime(2026, 6, 22, 7, 8, 9)
+    assert ac.default_time(now) == "07:08:09"
+    assert ac.default_date(jalali=False, now=now) == "2026-06-22"
+    assert ac.default_date(jalali=True, now=now) == "1405/04/01"
+    print("OK default datetime formats")
 
 
 def test_parse_line():
@@ -94,6 +103,7 @@ if __name__ == "__main__":
     test_jalali_roundtrip()
     test_normalize_date()
     test_normalize_time_code()
+    test_default_datetime_formats()
     test_parse_line()
     test_to_line_roundtrip()
     test_read_write()

@@ -95,7 +95,7 @@ def jalali_to_gregorian(jy: int, jm: int, jd: int):
 # کمکی‌های اعتبارسنجی و نرمال‌سازی ورودی‌ها
 # Validation / normalization helpers
 # ---------------------------------------------------------------------------
-def _split_date(text: str):
+def _split_date(text: str, expected_format: str = "yyyy-mm-dd"):
     """جدا کردن اجزای تاریخ که با - یا / یا . نوشته شده باشد."""
     text = (text or "").strip()
     for sep in ("-", "/", "."):
@@ -106,7 +106,9 @@ def _split_date(text: str):
         parts = text.split()
     parts = [p for p in parts if p != ""]
     if len(parts) != 3:
-        raise ValueError("قالب تاریخ باید سال-ماه-روز باشد (مثال: 2026-06-22)")
+        raise ValueError(
+            f"قالب تاریخ باید {expected_format} باشد (سال، ماه، روز)"
+        )
     try:
         y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError:
@@ -118,8 +120,14 @@ def normalize_date(text: str, jalali: bool) -> str:
     """
     ورودی تاریخ را (شمسی یا میلادی) گرفته و تاریخ میلادی به صورت YYYY-MM-DD برمی‌گرداند.
     Take a date string (Jalali or Gregorian) and return Gregorian YYYY-MM-DD.
+
+    قالب پیشفرض ورودی:
+      - میلادی: yyyy-mm-dd
+      - شمسی : yyyy/mm/dd
+    (اما جداکننده‌های - / . همگی پذیرفته می‌شوند.)
     """
-    y, m, d = _split_date(text)
+    expected = "yyyy/mm/dd" if jalali else "yyyy-mm-dd"
+    y, m, d = _split_date(text, expected_format=expected)
     if jalali:
         gy, gm, gd = jalali_to_gregorian(y, m, d)
     else:
@@ -140,7 +148,10 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
 
 
 def normalize_time(text: str) -> str:
-    """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
+    """
+    زمان را به صورت hh:mm:ss (قالب پیشفرض) استاندارد می‌کند.
+    hh:mm هم پذیرفته می‌شود و ثانیهٔ آن صفر در نظر گرفته می‌شود.
+    """
     text = (text or "").strip()
     if not text:
         raise ValueError("ساعت را وارد کنید")
@@ -148,7 +159,7 @@ def normalize_time(text: str) -> str:
     if len(parts) == 2:
         parts.append("0")
     if len(parts) != 3:
-        raise ValueError("قالب ساعت باید HH:MM:SS باشد (مثال: 07:39:23)")
+        raise ValueError("قالب ساعت باید hh:mm:ss باشد (ساعت، دقیقه، ثانیه)")
     try:
         h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError:

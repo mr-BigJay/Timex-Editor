@@ -10,7 +10,7 @@ Attendance (check-in/out) records manager.
 - امکان ورود تاریخ به صورت شمسی و ذخیرهٔ آن به صورت میلادی.
 - نمایش «لیست موارد اضافه‌شده» بین فرم و لیست اصلی.
 - اسکرول خودکار و ریل‌تایم لیست به محل رکورد تازه ثبت‌شده.
-- دکمهٔ ذخیره به صورت Save As (کنار فایل اصلی، بدون بازنویسی فایل قبلی).
+- دکمه‌های ذخیره و Save As برای ذخیره روی فایل فعلی یا مسیر جدید.
 - دکمهٔ خروج برای بازگشت به حالت اولیه (کادر کشیدن و رها کردن).
 
 اجرا:
@@ -249,13 +249,19 @@ class AttendanceApp:
             fg=MUTED,
             font=("Segoe UI", 10),
         ).pack(side="right")
-        tk.Label(
+        self.source_lbl = tk.Label(
             header,
             text=self.source_path or "",
             bg=BG,
             fg=TEXT,
             font=("Segoe UI", 10, "bold"),
-        ).pack(side="right", padx=(0, 6))
+        )
+        self.source_lbl.pack(side="right", padx=(0, 6))
+
+        save_as_top = self._button(header, "ذخیره با نام جدید (Save As)", self._on_save_as, bg=ACCENT)
+        save_as_top.pack(side="left", padx=(8, 0))
+        save_top = self._button(header, "ذخیره", self._on_save, bg=GOOD)
+        save_top.pack(side="left")
 
         # ---------------------------------------------------------- فرم ثبت
         form = tk.LabelFrame(
@@ -293,10 +299,10 @@ class AttendanceApp:
         code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)")
         code_box.pack(side="right", padx=8)
 
-        date_box, self.date_entry = field(row, "تاریخ (سال-ماه-روز)")
+        date_box, self.date_entry = field(row, "تاریخ میلادی (yyyy-mm-dd)")
         date_box.pack(side="right", padx=8)
 
-        time_box, self.time_entry = field(row, "ساعت (HH:MM:SS)")
+        time_box, self.time_entry = field(row, "ساعت (hh:mm:ss)")
         time_box.pack(side="right", padx=8)
 
         # گزینهٔ تاریخ شمسی
@@ -386,7 +392,10 @@ class AttendanceApp:
         exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
         exit_btn.pack(side="left", padx=(0, 8))
 
-        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
+        save_as_btn = self._button(footer, "ذخیره با نام جدید (Save As)", self._on_save_as, bg=ACCENT)
+        save_as_btn.pack(side="left", padx=(8, 0))
+
+        save_btn = self._button(footer, "ذخیره", self._on_save, bg=GOOD)
         save_btn.pack(side="left")
 
         self._render_all()
@@ -412,9 +421,11 @@ class AttendanceApp:
 
     def _update_date_hint(self):
         if self.jalali_var.get():
-            self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
+            self.date_hint.config(
+                text="قالب تاریخ شمسی: yyyy/mm/dd، نمونه: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود"
+            )
         else:
-            self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+            self.date_hint.config(text="قالب تاریخ میلادی: yyyy-mm-dd، نمونه: 2026-06-22")
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -477,10 +488,33 @@ class AttendanceApp:
         self.time_entry.delete(0, "end")
         self.code_entry.focus_set()
 
+    def _save_to_path(self, path: str) -> bool:
+        ordered = sorted(self.records, key=lambda r: r.sort_key)
+        try:
+            ac.write_records(path, ordered)
+        except Exception as exc:  # pragma: no cover
+            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
+            return False
+        self.dirty = False
+        self.source_path = path
+        if hasattr(self, "source_lbl"):
+            self.source_lbl.config(text=path)
+        self._update_status()
+        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+        return True
+
+    def _on_save(self):
+        if not self.records:
+            messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
+            return False
+        if not self.source_path:
+            return self._on_save_as()
+        return self._save_to_path(self.source_path)
+
     def _on_save_as(self):
         if not self.records:
             messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
-            return
+            return False
         initial_dir = (
             os.path.dirname(os.path.abspath(self.source_path))
             if self.source_path
@@ -495,7 +529,7 @@ class AttendanceApp:
             filetypes=[("فایل متنی", "*.txt"), ("همهٔ فایل‌ها", "*.*")],
         )
         if not path:
-            return
+            return False
         # جلوگیری از بازنویسی فایل اصلی
         if self.source_path and os.path.abspath(path) == os.path.abspath(self.source_path):
             if not messagebox.askyesno(
@@ -503,16 +537,8 @@ class AttendanceApp:
                 "این همان فایل اصلی است. برای جلوگیری از بازنویسی، نامی متفاوت انتخاب کنید.\n"
                 "آیا مطمئن هستید که می‌خواهید فایل اصلی بازنویسی شود؟",
             ):
-                return
-        ordered = sorted(self.records, key=lambda r: r.sort_key)
-        try:
-            ac.write_records(path, ordered)
-        except Exception as exc:  # pragma: no cover
-            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
-            return
-        self.dirty = False
-        self._update_status()
-        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+                return False
+        return self._save_to_path(path)
 
     def _on_exit(self):
         """بازگشت به حالت اولیه (کادر کشیدن و رها کردن)."""
@@ -525,7 +551,7 @@ class AttendanceApp:
             if answer is None:
                 return
             if answer:
-                self._on_save_as()
+                self._on_save()
                 if self.dirty:  # کاربر ذخیره را لغو کرد
                     return
         self.show_drop_screen()

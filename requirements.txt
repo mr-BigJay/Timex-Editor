@@ -1,0 +1,11 @@
+# این نرم‌افزار فقط با کتابخانهٔ استاندارد پایتون (tkinter) کار می‌کند و
+# هیچ وابستگی اجباری ندارد.
+#
+# tkinter بخشی از پایتون است. اگر هنگام اجرا خطای «No module named tkinter»
+# گرفتید، بستهٔ سیستمی آن را نصب کنید:
+#   - Debian/Ubuntu:  sudo apt-get install python3-tk
+#   - Fedora:         sudo dnf install python3-tkinter
+#   - macOS/Windows:  معمولاً همراه پایتون رسمی نصب است.
+#
+# وابستگی اختیاری (فقط برای فعال شدن «کشیدن و رها کردن» فایل):
+tkinterdnd2>=0.3.0

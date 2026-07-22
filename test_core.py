@@ -61,13 +61,13 @@ def test_parse_line():
 def test_format_inputs():
     assert ac.format_code_input("3085901") == "308590"
     assert ac.format_code_input("abc308590") == "308590"
+    assert ac.format_date_input("1405", jalali=True) == "1405/"
+    assert ac.format_date_input("140504", jalali=True) == "1405/04/"
     assert ac.format_date_input("14050401", jalali=True) == "1405/04/01"
-    assert ac.format_date_input("1405", jalali=True) == "1405"
-    assert ac.format_date_input("140504", jalali=True) == "1405/04"
+    assert ac.format_date_input("2026", jalali=False) == "2026-"
     assert ac.format_date_input("20260622", jalali=False) == "2026-06-22"
+    assert ac.format_time_input("07") == "07:"
     assert ac.format_time_input("073923") == "07:39:23"
-    assert ac.format_time_input("07") == "07"
-    assert ac.format_time_input("0739") == "07:39"
     assert ac.is_complete_date("1405/04/01")
     assert not ac.is_complete_date("1405/04")
     assert ac.is_complete_time("07:39:23")

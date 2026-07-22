@@ -40,6 +40,7 @@ except Exception:  # pragma: no cover - بستگی به محیط دارد
 
 
 APP_TITLE = "مدیریت رکوردهای ورود و خروج"
+APP_VERSION = "1.1"
 
 BG = "#0f172a"
 PANEL = "#1e293b"
@@ -56,7 +57,7 @@ ADDED_BG = "#14532d"
 class AttendanceApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title(APP_TITLE)
+        self.root.title(f"{APP_TITLE}  v{APP_VERSION}")
         self.root.geometry("1000x760")
         self.root.minsize(820, 620)
         self.root.configure(bg=BG)
@@ -64,6 +65,7 @@ class AttendanceApp:
         self.records: list[ac.Record] = []
         self.source_path: str | None = None
         self.dirty = False
+        self._updating_entry = False
         # نگاشت رکورد -> شناسهٔ ردیف در جدول اصلی
         self._row_of_record: dict[int, str] = {}
 
@@ -122,6 +124,8 @@ class AttendanceApp:
 
     def _format_entry(self, entry: tk.Entry, formatter):
         """اعمال قالب‌بندی خودکار و حفظ موقعیت مکان‌نما."""
+        if self._updating_entry:
+            return
         text = entry.get()
         cursor = entry.index(tk.INSERT)
         digits_before = sum(1 for c in text[:cursor] if c.isdigit())
@@ -130,24 +134,29 @@ class AttendanceApp:
         if formatted == text:
             return
 
-        entry.delete(0, tk.END)
-        entry.insert(0, formatted)
+        self._updating_entry = True
+        try:
+            entry.delete(0, tk.END)
+            entry.insert(0, formatted)
 
-        new_pos = len(formatted)
-        digit_count = 0
-        for i, ch in enumerate(formatted):
-            if ch.isdigit():
-                digit_count += 1
-            if digit_count >= digits_before:
-                new_pos = i + 1
-                break
-        entry.icursor(new_pos)
+            new_pos = len(formatted)
+            digit_count = 0
+            for i, ch in enumerate(formatted):
+                if ch.isdigit():
+                    digit_count += 1
+                if digit_count >= digits_before:
+                    new_pos = i + 1
+                    break
+            entry.icursor(new_pos)
+        finally:
+            self._updating_entry = False
 
     def _bind_code_entry(self, entry: tk.Entry):
         def on_change(_event=None):
             self._format_entry(entry, ac.format_code_input)
 
         entry.bind("<KeyRelease>", on_change)
+        entry.bind("<FocusOut>", on_change)
 
     def _bind_date_entry(self, entry: tk.Entry):
         def on_change(_event=None):
@@ -156,12 +165,14 @@ class AttendanceApp:
             )
 
         entry.bind("<KeyRelease>", on_change)
+        entry.bind("<FocusOut>", on_change)
 
     def _bind_time_entry(self, entry: tk.Entry):
         def on_change(_event=None):
             self._format_entry(entry, ac.format_time_input)
 
         entry.bind("<KeyRelease>", on_change)
+        entry.bind("<FocusOut>", on_change)
 
     def _on_jalali_toggle(self):
         """تغییر قالب تاریخ هنگام جابه‌جایی بین شمسی/میلادی."""
@@ -298,7 +309,7 @@ class AttendanceApp:
         save_btn = self._button(
             header, "ذخیره", self._on_save_as, bg=GOOD, hover="#15803d"
         )
-        save_btn.pack(side="left", padx=(0, 8))
+        save_btn.pack(side="right", padx=(8, 0))
 
         tk.Label(
             header,
@@ -306,14 +317,14 @@ class AttendanceApp:
             bg=BG,
             fg=MUTED,
             font=("Segoe UI", 10),
-        ).pack(side="right")
+        ).pack(side="left")
         tk.Label(
             header,
             text=self.source_path or "",
             bg=BG,
             fg=TEXT,
             font=("Segoe UI", 10, "bold"),
-        ).pack(side="right", padx=(0, 6))
+        ).pack(side="left", padx=(6, 0))
 
         self.root.bind("<Control-s>", lambda e: self._on_save_as())
         self.root.bind("<Control-S>", lambda e: self._on_save_as())

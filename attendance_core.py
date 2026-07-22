@@ -177,13 +177,19 @@ def format_date_input(text: str, jalali: bool) -> str:
     """
     قالب‌بندی خودکار تاریخ هنگام تایپ.
     شمسی: yyyy/mm/dd  |  میلادی: yyyy-mm-dd
+    جداکننده بلافاصله پس از سال (۴ رقم) و ماه (۲ رقم) اضافه می‌شود.
     """
     sep = "/" if jalali else "-"
     digits = "".join(c for c in (text or "") if c.isdigit())[:8]
     if len(digits) <= 4:
+        if len(digits) == 4:
+            return f"{digits}{sep}"
         return digits
     if len(digits) <= 6:
-        return f"{digits[:4]}{sep}{digits[4:]}"
+        part = f"{digits[:4]}{sep}{digits[4:]}"
+        if len(digits) == 6:
+            return f"{part}{sep}"
+        return part
     return f"{digits[:4]}{sep}{digits[4:6]}{sep}{digits[6:]}"
 
 
@@ -191,9 +197,14 @@ def format_time_input(text: str) -> str:
     """قالب‌بندی خودکار ساعت هنگام تایپ: hh:mm:ss"""
     digits = "".join(c for c in (text or "") if c.isdigit())[:6]
     if len(digits) <= 2:
+        if len(digits) == 2:
+            return f"{digits}:"
         return digits
     if len(digits) <= 4:
-        return f"{digits[:2]}:{digits[2:]}"
+        part = f"{digits[:2]}:{digits[2:]}"
+        if len(digits) == 4:
+            return f"{part}:"
+        return part
     return f"{digits[:2]}:{digits[2:4]}:{digits[4:]}"
 
 

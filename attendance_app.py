@@ -63,7 +63,6 @@ class AttendanceApp:
 
         self.records: list[ac.Record] = []
         self.source_path: str | None = None
-        self.save_path: str | None = None
         self.dirty = False
         # نگاشت رکورد -> شناسهٔ ردیف در جدول اصلی
         self._row_of_record: dict[int, str] = {}
@@ -101,14 +100,14 @@ class AttendanceApp:
         style.map("Treeview", background=[("selected", ACCENT)])
 
     # ---------------------------------------------------------- helper widgets
-    def _button(self, parent, text, command, bg=ACCENT, fg="white", width=None):
+    def _button(self, parent, text, command, bg=ACCENT, fg="white", width=None, hover=None):
         btn = tk.Button(
             parent,
             text=text,
             command=command,
             bg=bg,
             fg=fg,
-            activebackground=ACCENT_HOVER,
+            activebackground=hover or ACCENT_HOVER,
             activeforeground="white",
             relief="flat",
             bd=0,
@@ -121,6 +120,58 @@ class AttendanceApp:
             btn.configure(width=width)
         return btn
 
+    def _format_entry(self, entry: tk.Entry, formatter):
+        """اعمال قالب‌بندی خودکار و حفظ موقعیت مکان‌نما."""
+        text = entry.get()
+        cursor = entry.index(tk.INSERT)
+        digits_before = sum(1 for c in text[:cursor] if c.isdigit())
+
+        formatted = formatter(text)
+        if formatted == text:
+            return
+
+        entry.delete(0, tk.END)
+        entry.insert(0, formatted)
+
+        new_pos = len(formatted)
+        digit_count = 0
+        for i, ch in enumerate(formatted):
+            if ch.isdigit():
+                digit_count += 1
+            if digit_count >= digits_before:
+                new_pos = i + 1
+                break
+        entry.icursor(new_pos)
+
+    def _bind_code_entry(self, entry: tk.Entry):
+        def on_change(_event=None):
+            self._format_entry(entry, ac.format_code_input)
+
+        entry.bind("<KeyRelease>", on_change)
+
+    def _bind_date_entry(self, entry: tk.Entry):
+        def on_change(_event=None):
+            self._format_entry(
+                entry, lambda t: ac.format_date_input(t, jalali=self.jalali_var.get())
+            )
+
+        entry.bind("<KeyRelease>", on_change)
+
+    def _bind_time_entry(self, entry: tk.Entry):
+        def on_change(_event=None):
+            self._format_entry(entry, ac.format_time_input)
+
+        entry.bind("<KeyRelease>", on_change)
+
+    def _on_jalali_toggle(self):
+        """تغییر قالب تاریخ هنگام جابه‌جایی بین شمسی/میلادی."""
+        self._update_date_hint()
+        text = self.date_entry.get()
+        if text:
+            formatted = ac.format_date_input(text, jalali=self.jalali_var.get())
+            self.date_entry.delete(0, tk.END)
+            self.date_entry.insert(0, formatted)
+
     def _clear_container(self):
         for child in self.container.winfo_children():
             child.destroy()
@@ -131,7 +182,6 @@ class AttendanceApp:
         self._clear_container()
         self.records = []
         self.source_path = None
-        self.save_path = None
         self.dirty = False
 
         wrap = tk.Frame(self.container, bg=BG)
@@ -241,14 +291,13 @@ class AttendanceApp:
     def show_editor_screen(self):
         self._clear_container()
 
-        # نوار عنوان فایل و دکمه‌های ذخیره
+        # نوار عنوان فایل و دکمهٔ ذخیره
         header = tk.Frame(self.container, bg=BG)
         header.pack(fill="x", padx=16, pady=(12, 4))
 
-        save_as_btn = self._button(header, "ذخیره با نام دیگر (Save As)", self._on_save_as, bg=PANEL, fg=TEXT)
-        save_as_btn.pack(side="left", padx=(0, 8))
-
-        save_btn = self._button(header, "ذخیره", self._on_save, bg=ACCENT)
+        save_btn = self._button(
+            header, "ذخیره", self._on_save_as, bg=GOOD, hover="#15803d"
+        )
         save_btn.pack(side="left", padx=(0, 8))
 
         tk.Label(
@@ -266,8 +315,8 @@ class AttendanceApp:
             font=("Segoe UI", 10, "bold"),
         ).pack(side="right", padx=(0, 6))
 
-        self.root.bind("<Control-s>", lambda e: self._on_save())
-        self.root.bind("<Control-S>", lambda e: self._on_save())
+        self.root.bind("<Control-s>", lambda e: self._on_save_as())
+        self.root.bind("<Control-S>", lambda e: self._on_save_as())
 
         # ---------------------------------------------------------- فرم ثبت
         form = tk.LabelFrame(
@@ -287,7 +336,8 @@ class AttendanceApp:
 
         def field(parent, label):
             box = tk.Frame(parent, bg=PANEL)
-            tk.Label(box, text=label, bg=PANEL, fg=MUTED, font=("Segoe UI", 10)).pack(anchor="e")
+            lbl = tk.Label(box, text=label, bg=PANEL, fg=MUTED, font=("Segoe UI", 10))
+            lbl.pack(anchor="e")
             entry = tk.Entry(
                 box,
                 bg=BG,
@@ -299,17 +349,20 @@ class AttendanceApp:
                 width=16,
             )
             entry.pack(pady=(4, 0), ipady=5)
-            return box, entry
+            return box, entry, lbl
 
         # از راست به چپ: کد، تاریخ، ساعت
-        code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)")
+        code_box, self.code_entry, _ = field(row, "کد پرسنلی (۶ رقم)")
         code_box.pack(side="right", padx=8)
+        self._bind_code_entry(self.code_entry)
 
-        date_box, self.date_entry = field(row, "تاریخ میلادی (yyyy-mm-dd)")
+        date_box, self.date_entry, self.date_label = field(row, "تاریخ میلادی (yyyy-mm-dd)")
         date_box.pack(side="right", padx=8)
+        self._bind_date_entry(self.date_entry)
 
-        time_box, self.time_entry = field(row, "ساعت (hh:mm:ss)")
+        time_box, self.time_entry, _ = field(row, "ساعت (hh:mm:ss)")
         time_box.pack(side="right", padx=8)
+        self._bind_time_entry(self.time_entry)
 
         # گزینهٔ تاریخ شمسی
         self.jalali_var = tk.BooleanVar(value=False)
@@ -317,7 +370,7 @@ class AttendanceApp:
             row,
             text="ورود تاریخ به صورت شمسی",
             variable=self.jalali_var,
-            command=self._update_date_hint,
+            command=self._on_jalali_toggle,
             bg=PANEL,
             fg=TEXT,
             selectcolor=BG,
@@ -421,10 +474,12 @@ class AttendanceApp:
 
     def _update_date_hint(self):
         if self.jalali_var.get():
+            self.date_label.config(text="تاریخ شمسی (yyyy/mm/dd)")
             self.date_hint.config(
                 text="قالب پیش‌فرض شمسی: yyyy/mm/dd  (مثال: 1405/04/01)  ← هنگام ذخیره به میلادی تبدیل می‌شود"
             )
         else:
+            self.date_label.config(text="تاریخ میلادی (yyyy-mm-dd)")
             self.date_hint.config(text="قالب پیش‌فرض میلادی: yyyy-mm-dd  (مثال: 2026-06-22)")
 
     # ---------------------------------------------------------------- rendering
@@ -461,10 +516,27 @@ class AttendanceApp:
 
     # ------------------------------------------------------------------ actions
     def _on_submit(self):
+        code_text = self.code_entry.get()
+        date_text = self.date_entry.get()
+        time_text = self.time_entry.get()
+
+        if len(code_text) != 6:
+            messagebox.showwarning(APP_TITLE, "کد پرسنلی باید دقیقاً ۶ رقم باشد (نه کمتر و نه بیشتر).")
+            return
+        if not ac.is_complete_date(date_text):
+            messagebox.showwarning(
+                APP_TITLE,
+                f"تاریخ باید کامل باشد (مثال: {'1405/04/01' if self.jalali_var.get() else '2026-06-22'}).",
+            )
+            return
+        if not ac.is_complete_time(time_text):
+            messagebox.showwarning(APP_TITLE, "ساعت باید کامل باشد (مثال: 07:39:23).")
+            return
+
         try:
-            code = ac.normalize_code(self.code_entry.get())
-            date = ac.normalize_date(self.date_entry.get(), jalali=self.jalali_var.get())
-            time = ac.normalize_time(self.time_entry.get())
+            code = ac.normalize_code(code_text)
+            date = ac.normalize_date(date_text, jalali=self.jalali_var.get())
+            time = ac.normalize_time(time_text)
         except ValueError as exc:
             messagebox.showwarning(APP_TITLE, str(exc))
             return
@@ -506,34 +578,23 @@ class AttendanceApp:
         except Exception as exc:  # pragma: no cover
             messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
             return False
-        self.save_path = path
         self.dirty = False
         self._update_status()
         messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
         return True
-
-    def _on_save(self):
-        """ذخیرهٔ سریع در مسیر قبلی یا مسیر پیشنهادی."""
-        if not self.records:
-            messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
-            return
-        path = self.save_path or ac.suggested_save_path(self.source_path or "")
-        self._write_records_to(path)
 
     def _on_save_as(self):
         if not self.records:
             messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
             return
         initial_dir = (
-            os.path.dirname(os.path.abspath(self.save_path or self.source_path or ""))
-            if (self.save_path or self.source_path)
+            os.path.dirname(os.path.abspath(self.source_path))
+            if self.source_path
             else os.getcwd()
         )
-        initial_file = os.path.basename(
-            ac.suggested_save_path(self.save_path or self.source_path or "")
-        )
+        initial_file = os.path.basename(ac.suggested_save_path(self.source_path or ""))
         path = filedialog.asksaveasfilename(
-            title="ذخیره با نام دیگر (Save As)",
+            title="ذخیره",
             initialdir=initial_dir,
             initialfile=initial_file,
             defaultextension=".txt",
@@ -553,7 +614,7 @@ class AttendanceApp:
             if answer is None:
                 return
             if answer:
-                self._on_save()
+                self._on_save_as()
                 if self.dirty:  # کاربر ذخیره را لغو کرد
                     return
         self.show_drop_screen()

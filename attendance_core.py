@@ -164,8 +164,47 @@ def normalize_code(text: str) -> str:
     if not text.isdigit():
         raise ValueError("کد پرسنلی باید فقط عدد باشد")
     if len(text) != 6:
-        raise ValueError("کد پرسنلی باید دقیقاً ۶ رقم باشد")
+        raise ValueError("کد پرسنلی باید دقیقاً ۶ رقم باشد (نه کمتر و نه بیشتر)")
     return text
+
+
+def format_code_input(text: str) -> str:
+    """فقط رقم، حداکثر ۶ کاراکتر."""
+    return "".join(c for c in (text or "") if c.isdigit())[:6]
+
+
+def format_date_input(text: str, jalali: bool) -> str:
+    """
+    قالب‌بندی خودکار تاریخ هنگام تایپ.
+    شمسی: yyyy/mm/dd  |  میلادی: yyyy-mm-dd
+    """
+    sep = "/" if jalali else "-"
+    digits = "".join(c for c in (text or "") if c.isdigit())[:8]
+    if len(digits) <= 4:
+        return digits
+    if len(digits) <= 6:
+        return f"{digits[:4]}{sep}{digits[4:]}"
+    return f"{digits[:4]}{sep}{digits[4:6]}{sep}{digits[6:]}"
+
+
+def format_time_input(text: str) -> str:
+    """قالب‌بندی خودکار ساعت هنگام تایپ: hh:mm:ss"""
+    digits = "".join(c for c in (text or "") if c.isdigit())[:6]
+    if len(digits) <= 2:
+        return digits
+    if len(digits) <= 4:
+        return f"{digits[:2]}:{digits[2:]}"
+    return f"{digits[:2]}:{digits[2:4]}:{digits[4:]}"
+
+
+def is_complete_date(text: str) -> bool:
+    """آیا تاریخ کامل وارد شده است؟"""
+    return len((text or "").strip()) == 10
+
+
+def is_complete_time(text: str) -> bool:
+    """آیا ساعت کامل وارد شده است؟"""
+    return len((text or "").strip()) == 8
 
 
 # ---------------------------------------------------------------------------

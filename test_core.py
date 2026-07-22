@@ -58,6 +58,23 @@ def test_parse_line():
     print("OK parse line")
 
 
+def test_format_inputs():
+    assert ac.format_code_input("3085901") == "308590"
+    assert ac.format_code_input("abc308590") == "308590"
+    assert ac.format_date_input("14050401", jalali=True) == "1405/04/01"
+    assert ac.format_date_input("1405", jalali=True) == "1405"
+    assert ac.format_date_input("140504", jalali=True) == "1405/04"
+    assert ac.format_date_input("20260622", jalali=False) == "2026-06-22"
+    assert ac.format_time_input("073923") == "07:39:23"
+    assert ac.format_time_input("07") == "07"
+    assert ac.format_time_input("0739") == "07:39"
+    assert ac.is_complete_date("1405/04/01")
+    assert not ac.is_complete_date("1405/04")
+    assert ac.is_complete_time("07:39:23")
+    assert not ac.is_complete_time("07:39")
+    print("OK format inputs")
+
+
 def test_parse_line_normalizes():
     rec = ac.parse_line("308590\t2026/6/2 7:12:45")
     assert rec.date == "2026-06-02"
@@ -104,6 +121,7 @@ if __name__ == "__main__":
     test_jalali_roundtrip()
     test_normalize_date()
     test_normalize_time_code()
+    test_format_inputs()
     test_parse_line()
     test_parse_line_normalizes()
     test_to_line_roundtrip()

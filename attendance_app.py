@@ -257,6 +257,27 @@ class AttendanceApp:
             font=("Segoe UI", 10, "bold"),
         ).pack(side="right", padx=(0, 6))
 
+        # ------------------------------------------------------- نوار پایین
+        # این نوار زودتر و در پایین صفحه چیده می‌شود تا دکمه‌های «ذخیره» و
+        # «خروج» همیشه دیده شوند و با کوچک شدن پنجره از صفحه بیرون نروند.
+        footer = tk.Frame(self.container, bg=BG)
+        footer.pack(side="bottom", fill="x", padx=16, pady=(4, 14))
+
+        self.status_lbl = tk.Label(
+            footer,
+            text="",
+            bg=BG,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        )
+        self.status_lbl.pack(side="right")
+
+        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
+        exit_btn.pack(side="left", padx=(0, 8))
+
+        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
+        save_btn.pack(side="left")
+
         # ---------------------------------------------------------- فرم ثبت
         form = tk.LabelFrame(
             self.container,
@@ -305,7 +326,7 @@ class AttendanceApp:
             row,
             text="ورود تاریخ به صورت شمسی",
             variable=self.jalali_var,
-            command=self._update_date_hint,
+            command=self._on_jalali_toggle,
             bg=PANEL,
             fg=TEXT,
             selectcolor=BG,
@@ -323,6 +344,9 @@ class AttendanceApp:
             font=("Segoe UI", 9),
         )
         self.date_hint.pack(anchor="e", padx=14, pady=(0, 4))
+
+        # مقادیر پیش‌فرض با قالب استاندارد (ساعت تهران HH:MM:SS و تاریخ میلادی YYYY-MM-DD)
+        self._fill_default_datetime()
         self._update_date_hint()
 
         # دکمهٔ ثبت (پایین فرم)
@@ -370,25 +394,6 @@ class AttendanceApp:
         vsb.pack(side="left", fill="y")
         self.tree.pack(side="right", fill="both", expand=True)
 
-        # ------------------------------------------------------- نوار پایین
-        footer = tk.Frame(self.container, bg=BG)
-        footer.pack(fill="x", padx=16, pady=(4, 14))
-
-        self.status_lbl = tk.Label(
-            footer,
-            text="",
-            bg=BG,
-            fg=MUTED,
-            font=("Segoe UI", 10),
-        )
-        self.status_lbl.pack(side="right")
-
-        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
-        exit_btn.pack(side="left", padx=(0, 8))
-
-        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
-        save_btn.pack(side="left")
-
         self._render_all()
         self.code_entry.focus_set()
 
@@ -412,9 +417,34 @@ class AttendanceApp:
 
     def _update_date_hint(self):
         if self.jalali_var.get():
-            self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
+            self.date_hint.config(
+                text="قالب شمسی: YYYY/MM/DD (نمونه: 1405/04/01)  ← هنگام ذخیره به میلادی تبدیل می‌شود"
+            )
         else:
-            self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+            self.date_hint.config(text="قالب میلادی: YYYY-MM-DD (نمونه: 2026-06-22)")
+
+    def _set_entry(self, entry: tk.Entry, value: str):
+        entry.delete(0, "end")
+        entry.insert(0, value)
+
+    def _fill_default_datetime(self):
+        """پر کردن فیلدهای تاریخ و ساعت با مقادیر پیش‌فرض در قالب استاندارد."""
+        self._set_entry(self.time_entry, ac.default_time_str())
+        if self.jalali_var.get():
+            self._set_entry(self.date_entry, ac.default_jalali_date_str())
+        else:
+            self._set_entry(self.date_entry, ac.default_gregorian_date_str())
+
+    def _on_jalali_toggle(self):
+        """با تغییر حالت شمسی/میلادی، تاریخِ داخل فیلد به قالب متناظر تبدیل می‌شود."""
+        current = self.date_entry.get().strip()
+        if self.jalali_var.get():
+            converted = ac.gregorian_str_to_jalali_str(current) if current else ""
+            self._set_entry(self.date_entry, converted or ac.default_jalali_date_str())
+        else:
+            converted = ac.jalali_str_to_gregorian_str(current) if current else ""
+            self._set_entry(self.date_entry, converted or ac.default_gregorian_date_str())
+        self._update_date_hint()
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -473,8 +503,10 @@ class AttendanceApp:
             self.tree.focus(item)
             self.tree.see(item)
 
-        # پاک کردن فیلدها برای ورودی بعدی (کد و تاریخ نگه داشته می‌شوند برای سرعت)
-        self.time_entry.delete(0, "end")
+        # آماده‌سازی برای ورودی بعدی: کد پاک می‌شود، تاریخ نگه داشته می‌شود
+        # و ساعت دوباره با زمان کنونی (قالب HH:MM:SS) پر می‌شود.
+        self.code_entry.delete(0, "end")
+        self._set_entry(self.time_entry, ac.default_time_str())
         self.code_entry.focus_set()
 
     def _on_save_as(self):

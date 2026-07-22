@@ -11,8 +11,13 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+
+
+# منطقهٔ زمانی تهران (UTC+03:30، بدون ساعت تابستانی از ۱۴۰۱)
+# Tehran timezone (fixed UTC+03:30, no DST).
+TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +142,42 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
         return f"{jy:04d}/{jm:02d}/{jd:02d}"
     except Exception:
         return ""
+
+
+def jalali_str_to_gregorian_str(date_str: str) -> str:
+    """رشتهٔ شمسی YYYY/MM/DD -> رشتهٔ میلادی YYYY-MM-DD برای نمایش/تبدیل فیلد."""
+    try:
+        y, m, d = _split_date(date_str)
+        gy, gm, gd = jalali_to_gregorian(y, m, d)
+        return f"{gy:04d}-{gm:02d}-{gd:02d}"
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# مقادیر پیش‌فرض تاریخ و ساعت (به وقت تهران) با قالب استاندارد
+# Default date/time values (Tehran time) in the standard formats.
+# ---------------------------------------------------------------------------
+def now_tehran() -> datetime:
+    """زمان کنونی به وقت تهران."""
+    return datetime.now(TEHRAN_TZ)
+
+
+def default_time_str() -> str:
+    """ساعت کنونی تهران با قالب HH:MM:SS."""
+    return now_tehran().strftime("%H:%M:%S")
+
+
+def default_gregorian_date_str() -> str:
+    """تاریخ میلادی امروز با قالب YYYY-MM-DD."""
+    return now_tehran().strftime("%Y-%m-%d")
+
+
+def default_jalali_date_str() -> str:
+    """تاریخ شمسی امروز با قالب YYYY/MM/DD."""
+    dt = now_tehran()
+    jy, jm, jd = gregorian_to_jalali(dt.year, dt.month, dt.day)
+    return f"{jy:04d}/{jm:02d}/{jd:02d}"
 
 
 def normalize_time(text: str) -> str:

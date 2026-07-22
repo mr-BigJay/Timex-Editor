@@ -26,6 +26,30 @@ def test_normalize_date():
     print("OK normalize date")
 
 
+def test_jalali_gregorian_str_conversion():
+    assert ac.gregorian_str_to_jalali_str("2026-06-22") == "1405/04/01"
+    assert ac.jalali_str_to_gregorian_str("1405/04/01") == "2026-06-22"
+    assert ac.jalali_str_to_gregorian_str("1405-04-01") == "2026-06-22"
+    # ورودی نامعتبر رشتهٔ خالی برمی‌گرداند
+    assert ac.jalali_str_to_gregorian_str("bad") == ""
+    assert ac.gregorian_str_to_jalali_str("") == ""
+    print("OK jalali/gregorian str conversion")
+
+
+def test_default_formats():
+    import re
+
+    assert re.fullmatch(r"\d{2}:\d{2}:\d{2}", ac.default_time_str())
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", ac.default_gregorian_date_str())
+    assert re.fullmatch(r"\d{4}/\d{2}/\d{2}", ac.default_jalali_date_str())
+    # مقدار پیش‌فرض باید معتبر و رفت‌وبرگشتی باشد
+    assert ac.normalize_date(ac.default_gregorian_date_str(), jalali=False) == \
+        ac.default_gregorian_date_str()
+    assert ac.normalize_date(ac.default_jalali_date_str(), jalali=True) == \
+        ac.default_gregorian_date_str()
+    print("OK default formats")
+
+
 def test_normalize_time_code():
     assert ac.normalize_time("7:39:23") == "07:39:23"
     assert ac.normalize_time("07:39") == "07:39:00"
@@ -93,6 +117,8 @@ def test_read_write():
 if __name__ == "__main__":
     test_jalali_roundtrip()
     test_normalize_date()
+    test_jalali_gregorian_str_conversion()
+    test_default_formats()
     test_normalize_time_code()
     test_parse_line()
     test_to_line_roundtrip()

@@ -139,6 +139,42 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
         return ""
 
 
+def jalali_str_to_gregorian_str(date_str: str) -> str:
+    """رشته شمسی YYYY/MM/DD -> رشته میلادی YYYY-MM-DD."""
+    try:
+        y, m, d = _split_date(date_str)
+        gy, gm, gd = jalali_to_gregorian(y, m, d)
+        return f"{gy:04d}-{gm:02d}-{gd:02d}"
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# قالب‌های پیش‌فرض تاریخ و ساعت
+# Default date/time formats
+#   - ساعت میلادی/شمسی:  HH:MM:SS
+#   - تاریخ میلادی:        YYYY-MM-DD
+#   - تاریخ شمسی:          YYYY/MM/DD
+# ---------------------------------------------------------------------------
+def today_gregorian_str(now: Optional[datetime] = None) -> str:
+    """تاریخ امروز به صورت میلادی YYYY-MM-DD."""
+    now = now or datetime.now()
+    return now.strftime("%Y-%m-%d")
+
+
+def today_jalali_str(now: Optional[datetime] = None) -> str:
+    """تاریخ امروز به صورت شمسی YYYY/MM/DD."""
+    now = now or datetime.now()
+    jy, jm, jd = gregorian_to_jalali(now.year, now.month, now.day)
+    return f"{jy:04d}/{jm:02d}/{jd:02d}"
+
+
+def now_time_str(now: Optional[datetime] = None) -> str:
+    """ساعت جاری به صورت HH:MM:SS."""
+    now = now or datetime.now()
+    return now.strftime("%H:%M:%S")
+
+
 def normalize_time(text: str) -> str:
     """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
     text = (text or "").strip()

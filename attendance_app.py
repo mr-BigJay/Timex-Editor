@@ -293,7 +293,22 @@ class AttendanceApp:
         code_box, self.code_entry = field(row, "کد پرسنلی (۶ رقم)")
         code_box.pack(side="right", padx=8)
 
-        date_box, self.date_entry = field(row, "تاریخ (سال-ماه-روز)")
+        date_box = tk.Frame(row, bg=PANEL)
+        self.date_label = tk.Label(
+            date_box, text="تاریخ میلادی (YYYY-MM-DD)", bg=PANEL, fg=MUTED, font=("Segoe UI", 10)
+        )
+        self.date_label.pack(anchor="e")
+        self.date_entry = tk.Entry(
+            date_box,
+            bg=BG,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            font=("Segoe UI", 12),
+            justify="center",
+            width=16,
+        )
+        self.date_entry.pack(pady=(4, 0), ipady=5)
         date_box.pack(side="right", padx=8)
 
         time_box, self.time_entry = field(row, "ساعت (HH:MM:SS)")
@@ -305,7 +320,7 @@ class AttendanceApp:
             row,
             text="ورود تاریخ به صورت شمسی",
             variable=self.jalali_var,
-            command=self._update_date_hint,
+            command=self._on_jalali_toggle,
             bg=PANEL,
             fg=TEXT,
             selectcolor=BG,
@@ -324,6 +339,7 @@ class AttendanceApp:
         )
         self.date_hint.pack(anchor="e", padx=14, pady=(0, 4))
         self._update_date_hint()
+        self._prefill_defaults()
 
         # دکمهٔ ثبت (پایین فرم)
         submit = self._button(form, "ثبت رکورد", self._on_submit, bg=GOOD)
@@ -348,6 +364,34 @@ class AttendanceApp:
         self.added_tree = self._make_tree(added_frame, height=4, added_style=True)
         self.added_tree.pack(fill="x", padx=8, pady=8)
 
+        # ------------------------------------------------------- نوار پایین
+        # این نوار پیش از لیست بزرگ و در پایین صفحه چیده می‌شود تا با بزرگ‌شدن
+        # لیست، دکمه‌های «ذخیره» و «خروج» هیچ‌وقت از صفحه بیرون نروند.
+        footer = tk.Frame(self.container, bg=BG)
+        footer.pack(side="bottom", fill="x", padx=16, pady=(4, 14))
+
+        self.status_lbl = tk.Label(
+            footer,
+            text="",
+            bg=BG,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        )
+        self.status_lbl.pack(side="right")
+
+        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
+        exit_btn.pack(side="left", padx=(0, 8))
+
+        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
+        save_btn.pack(side="left")
+
+        save_quick_btn = self._button(footer, "ذخیره", self._on_save, bg=GOOD)
+        save_quick_btn.pack(side="left", padx=(0, 8))
+
+        # کلید میان‌بر Ctrl+S برای ذخیره
+        self.root.bind("<Control-s>", lambda e: self._on_save())
+        self.root.bind("<Control-S>", lambda e: self._on_save())
+
         # ------------------------------------------------- لیست همهٔ رکوردها
         list_frame = tk.LabelFrame(
             self.container,
@@ -369,25 +413,6 @@ class AttendanceApp:
         self.tree.configure(yscrollcommand=vsb.set)
         vsb.pack(side="left", fill="y")
         self.tree.pack(side="right", fill="both", expand=True)
-
-        # ------------------------------------------------------- نوار پایین
-        footer = tk.Frame(self.container, bg=BG)
-        footer.pack(fill="x", padx=16, pady=(4, 14))
-
-        self.status_lbl = tk.Label(
-            footer,
-            text="",
-            bg=BG,
-            fg=MUTED,
-            font=("Segoe UI", 10),
-        )
-        self.status_lbl.pack(side="right")
-
-        exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
-        exit_btn.pack(side="left", padx=(0, 8))
-
-        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
-        save_btn.pack(side="left")
 
         self._render_all()
         self.code_entry.focus_set()
@@ -412,9 +437,41 @@ class AttendanceApp:
 
     def _update_date_hint(self):
         if self.jalali_var.get():
-            self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
+            self.date_label.config(text="تاریخ شمسی (YYYY/MM/DD)")
+            self.date_hint.config(
+                text="قالب شمسی: YYYY/MM/DD (نمونه: 1405/04/01) ← هنگام ذخیره به میلادی تبدیل می‌شود"
+            )
         else:
-            self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+            self.date_label.config(text="تاریخ میلادی (YYYY-MM-DD)")
+            self.date_hint.config(text="قالب میلادی: YYYY-MM-DD (نمونه: 2026-06-22)")
+
+    def _prefill_defaults(self):
+        """پر کردن فیلدها با تاریخ و ساعت جاری در قالب پیش‌فرض درست."""
+        if self.jalali_var.get():
+            date_default = ac.today_jalali_str()
+        else:
+            date_default = ac.today_gregorian_str()
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(0, date_default)
+        self.time_entry.delete(0, "end")
+        self.time_entry.insert(0, ac.now_time_str())
+
+    def _on_jalali_toggle(self):
+        """با تغییر حالت شمسی/میلادی، مقدار فیلد تاریخ را به قالب درست تبدیل می‌کند."""
+        self._update_date_hint()
+        current = self.date_entry.get().strip()
+        if self.jalali_var.get():
+            # میلادی -> شمسی
+            converted = ac.gregorian_str_to_jalali_str(current) if current else ""
+            if not converted:
+                converted = ac.today_jalali_str()
+        else:
+            # شمسی -> میلادی
+            converted = ac.jalali_str_to_gregorian_str(current) if current else ""
+            if not converted:
+                converted = ac.today_gregorian_str()
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(0, converted)
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -473,9 +530,34 @@ class AttendanceApp:
             self.tree.focus(item)
             self.tree.see(item)
 
-        # پاک کردن فیلدها برای ورودی بعدی (کد و تاریخ نگه داشته می‌شوند برای سرعت)
+        # آماده‌سازی برای ورودی بعدی: کد و تاریخ نگه داشته می‌شوند و ساعت با
+        # زمان جاری (قالب HH:MM:SS) دوباره پر می‌شود تا قالب پیش‌فرض حفظ شود.
         self.time_entry.delete(0, "end")
+        self.time_entry.insert(0, ac.now_time_str())
+        self.code_entry.delete(0, "end")
         self.code_entry.focus_set()
+
+    def _write_to(self, path: str) -> bool:
+        ordered = sorted(self.records, key=lambda r: r.sort_key)
+        try:
+            ac.write_records(path, ordered)
+        except Exception as exc:  # pragma: no cover
+            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
+            return False
+        self.dirty = False
+        self._update_status()
+        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+        return True
+
+    def _on_save(self):
+        """ذخیرهٔ سریع در فایل پیشنهادی کنار فایل اصلی (بدون بازنویسی فایل اصلی)."""
+        if not self.records:
+            messagebox.showinfo(APP_TITLE, "رکوردی برای ذخیره وجود ندارد.")
+            return
+        path = ac.suggested_save_path(self.source_path or "")
+        if not os.path.isabs(path):
+            path = os.path.join(os.getcwd(), path)
+        self._write_to(path)
 
     def _on_save_as(self):
         if not self.records:
@@ -504,15 +586,7 @@ class AttendanceApp:
                 "آیا مطمئن هستید که می‌خواهید فایل اصلی بازنویسی شود؟",
             ):
                 return
-        ordered = sorted(self.records, key=lambda r: r.sort_key)
-        try:
-            ac.write_records(path, ordered)
-        except Exception as exc:  # pragma: no cover
-            messagebox.showerror(APP_TITLE, f"خطا در ذخیره:\n{exc}")
-            return
-        self.dirty = False
-        self._update_status()
-        messagebox.showinfo(APP_TITLE, f"با موفقیت ذخیره شد:\n{path}")
+        self._write_to(path)
 
     def _on_exit(self):
         """بازگشت به حالت اولیه (کادر کشیدن و رها کردن)."""

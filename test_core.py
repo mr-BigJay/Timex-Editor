@@ -26,6 +26,29 @@ def test_normalize_date():
     print("OK normalize date")
 
 
+def test_date_string_conversions():
+    # میلادی -> شمسی و برعکس با قالب‌های پیش‌فرض
+    assert ac.gregorian_str_to_jalali_str("2026-06-22") == "1405/04/01"
+    assert ac.jalali_str_to_gregorian_str("1405/04/01") == "2026-06-22"
+    # پذیرش جداکننده‌های مختلف در ورودی، خروجی همیشه با قالب استاندارد
+    assert ac.jalali_str_to_gregorian_str("1405-04-01") == "2026-06-22"
+    assert ac.gregorian_str_to_jalali_str("2026/06/22") == "1405/04/01"
+    # ورودی نامعتبر رشته خالی برمی‌گرداند
+    assert ac.gregorian_str_to_jalali_str("نامعتبر") == ""
+    assert ac.jalali_str_to_gregorian_str("") == ""
+    print("OK date string conversions")
+
+
+def test_default_formats():
+    from datetime import datetime
+
+    now = datetime(2026, 6, 22, 7, 39, 5)
+    assert ac.today_gregorian_str(now) == "2026-06-22"
+    assert ac.today_jalali_str(now) == "1405/04/01"
+    assert ac.now_time_str(now) == "07:39:05"
+    print("OK default formats")
+
+
 def test_normalize_time_code():
     assert ac.normalize_time("7:39:23") == "07:39:23"
     assert ac.normalize_time("07:39") == "07:39:00"
@@ -93,6 +116,8 @@ def test_read_write():
 if __name__ == "__main__":
     test_jalali_roundtrip()
     test_normalize_date()
+    test_date_string_conversions()
+    test_default_formats()
     test_normalize_time_code()
     test_parse_line()
     test_to_line_roundtrip()

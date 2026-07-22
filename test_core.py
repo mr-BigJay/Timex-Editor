@@ -58,6 +58,16 @@ def test_parse_line():
     print("OK parse line")
 
 
+def test_parse_line_normalizes():
+    rec = ac.parse_line("308590\t2026/6/2 7:12:45")
+    assert rec.date == "2026-06-02"
+    assert rec.time == "07:12:45"
+    rec2 = ac.parse_line("308590\t2026-6-2 7:39")
+    assert rec2.date == "2026-06-02"
+    assert rec2.time == "07:39:00"
+    print("OK parse line normalizes")
+
+
 def test_to_line_roundtrip():
     rec = ac.Record(code="308590", date="2026-06-22", time="07:12:45", extra=["1", "0", "1", "0"])
     assert rec.to_line() == "308590\t2026-06-22 07:12:45\t1\t0\t1\t0"
@@ -95,6 +105,7 @@ if __name__ == "__main__":
     test_normalize_date()
     test_normalize_time_code()
     test_parse_line()
+    test_parse_line_normalizes()
     test_to_line_roundtrip()
     test_read_write()
     print("\nهمه‌ی تست‌ها با موفقیت اجرا شدند / All tests passed")

@@ -243,7 +243,16 @@ def parse_line(line: str) -> Optional[Record]:
         else:
             extra = rest
 
-    date = date.replace("/", "-")
+    if date:
+        try:
+            date = normalize_date(date, jalali=False)
+        except ValueError:
+            pass
+    if time:
+        try:
+            time = normalize_time(time)
+        except ValueError:
+            pass
     return Record(code=code, date=date, time=time, extra=extra, added=False, raw=line.rstrip("\n"))
 
 

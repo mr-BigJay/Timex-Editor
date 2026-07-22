@@ -26,6 +26,7 @@ from __future__ import annotations
 import os
 import sys
 import tkinter as tk
+from datetime import datetime
 from tkinter import filedialog, messagebox, ttk
 
 import attendance_core as ac
@@ -305,7 +306,7 @@ class AttendanceApp:
             row,
             text="ورود تاریخ به صورت شمسی",
             variable=self.jalali_var,
-            command=self._update_date_hint,
+            command=self._on_jalali_toggle,
             bg=PANEL,
             fg=TEXT,
             selectcolor=BG,
@@ -386,10 +387,13 @@ class AttendanceApp:
         exit_btn = self._button(footer, "خروج", self._on_exit, bg=DANGER)
         exit_btn.pack(side="left", padx=(0, 8))
 
-        save_btn = self._button(footer, "ذخیره (Save As)", self._on_save_as, bg=ACCENT)
+        save_btn = self._button(footer, "💾 ذخیره (Save As)", self._on_save_as, bg=ACCENT)
         save_btn.pack(side="left")
 
         self._render_all()
+        self._fill_default_datetime()
+        # Ctrl+S shortcut
+        self.root.bind("<Control-s>", lambda e: self._on_save_as())
         self.code_entry.focus_set()
 
     def _make_tree(self, parent, height, added_style=False):
@@ -411,10 +415,58 @@ class AttendanceApp:
         return tree
 
     def _update_date_hint(self):
+        """Update the format hint label only (no field conversion)."""
         if self.jalali_var.get():
             self.date_hint.config(text="نمونهٔ شمسی: 1405/04/01  ← هنگام ذخیره به میلادی تبدیل می‌شود")
         else:
             self.date_hint.config(text="نمونهٔ میلادی: 2026-06-22")
+
+    def _on_jalali_toggle(self):
+        """Called when the Jalali checkbox is toggled: convert date field then update hint."""
+        self._convert_date_field()
+        self._update_date_hint()
+
+    def _convert_date_field(self):
+        """Convert the date entry value between Gregorian and Jalali formats."""
+        current = self.date_entry.get().strip()
+        if not current:
+            return
+        try:
+            if self.jalali_var.get():
+                # field currently holds Gregorian; convert to Jalali yyyy/mm/dd
+                y, m, d = ac._split_date(current)
+                jy, jm, jd = ac.gregorian_to_jalali(y, m, d)
+                new_val = f"{jy:04d}/{jm:02d}/{jd:02d}"
+            else:
+                # field currently holds Jalali; convert to Gregorian yyyy-mm-dd
+                y, m, d = ac._split_date(current)
+                gy, gm, gd = ac.jalali_to_gregorian(y, m, d)
+                new_val = f"{gy:04d}-{gm:02d}-{gd:02d}"
+            self.date_entry.delete(0, "end")
+            self.date_entry.insert(0, new_val)
+        except Exception:
+            pass
+
+    # -------------------------------------------- default date / time helpers
+    def _fill_default_datetime(self):
+        """Pre-fill date and time fields with today's date and current time."""
+        now = datetime.now()
+        if self.jalali_var.get():
+            jy, jm, jd = ac.gregorian_to_jalali(now.year, now.month, now.day)
+            date_val = f"{jy:04d}/{jm:02d}/{jd:02d}"
+        else:
+            date_val = now.strftime("%Y-%m-%d")
+        time_val = now.strftime("%H:%M:%S")
+
+        self.date_entry.delete(0, "end")
+        self.date_entry.insert(0, date_val)
+        self.time_entry.delete(0, "end")
+        self.time_entry.insert(0, time_val)
+
+    def _refresh_time(self):
+        """Update the time field to the current time (called after each submit)."""
+        self.time_entry.delete(0, "end")
+        self.time_entry.insert(0, datetime.now().strftime("%H:%M:%S"))
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):
@@ -473,8 +525,8 @@ class AttendanceApp:
             self.tree.focus(item)
             self.tree.see(item)
 
-        # پاک کردن فیلدها برای ورودی بعدی (کد و تاریخ نگه داشته می‌شوند برای سرعت)
-        self.time_entry.delete(0, "end")
+        # پاک کردن فیلدها برای ورودی بعدی (کد نگه داشته می‌شود، زمان به‌روز می‌شود)
+        self._refresh_time()
         self.code_entry.focus_set()
 
     def _on_save_as(self):
@@ -528,6 +580,7 @@ class AttendanceApp:
                 self._on_save_as()
                 if self.dirty:  # کاربر ذخیره را لغو کرد
                     return
+        self.root.unbind("<Control-s>")
         self.show_drop_screen()
 
 

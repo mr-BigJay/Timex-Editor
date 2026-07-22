@@ -158,6 +158,27 @@ def normalize_time(text: str) -> str:
     return f"{h:02d}:{mi:02d}:{s:02d}"
 
 
+def normalize_partial_record(date: str, time: str) -> tuple[str, str]:
+    """
+    در صورت معتبر بودن، تاریخ/ساعت رکوردهای خوانده‌شده از فایل را به فرمت استاندارد
+    برنامه تبدیل می‌کند. اگر بخشی نامعتبر یا خالی باشد، همان مقدار قبلی حفظ می‌شود.
+    """
+    normalized_date = date
+    normalized_time = time
+
+    if date:
+        try:
+            normalized_date = normalize_date(date, jalali=False)
+        except ValueError:
+            pass
+    if time:
+        try:
+            normalized_time = normalize_time(time)
+        except ValueError:
+            pass
+    return normalized_date, normalized_time
+
+
 def normalize_code(text: str) -> str:
     """کد پرسنلی باید ۶ رقم باشد."""
     text = (text or "").strip()
@@ -244,6 +265,7 @@ def parse_line(line: str) -> Optional[Record]:
             extra = rest
 
     date = date.replace("/", "-")
+    date, time = normalize_partial_record(date, time)
     return Record(code=code, date=date, time=time, extra=extra, added=False, raw=line.rstrip("\n"))
 
 

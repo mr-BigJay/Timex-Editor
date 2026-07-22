@@ -55,6 +55,10 @@ def test_parse_line():
     # فاصله به جای تب
     rec3 = ac.parse_line("308590 2026-06-28 07:39:23")
     assert rec3.code == "308590" and rec3.date == "2026-06-28" and rec3.time == "07:39:23"
+    # نرمال‌سازی فرمت پیش‌فرض تاریخ/ساعت برای رکوردهای موجود
+    rec4 = ac.parse_line("308590\t2026/6/2\t7:3")
+    assert rec4.date == "2026-06-02"
+    assert rec4.time == "07:03:00"
     print("OK parse line")
 
 

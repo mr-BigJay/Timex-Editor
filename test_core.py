@@ -20,15 +20,28 @@ def test_jalali_roundtrip():
 
 def test_normalize_date():
     assert ac.normalize_date("2026-06-22", jalali=False) == "2026-06-22"
-    assert ac.normalize_date("2026/06/22", jalali=False) == "2026-06-22"
     assert ac.normalize_date("1405/04/01", jalali=True) == "2026-06-22"
-    assert ac.normalize_date("1405-4-1", jalali=True) == "2026-06-22"
+    for bad, is_jalali in [
+        ("2026/06/22", False),
+        ("1405-04-01", True),
+        ("1405/4/1", True),
+    ]:
+        try:
+            ac.normalize_date(bad, jalali=is_jalali)
+            assert False, "should have failed: " + bad
+        except ValueError:
+            pass
     print("OK normalize date")
 
 
 def test_normalize_time_code():
-    assert ac.normalize_time("7:39:23") == "07:39:23"
-    assert ac.normalize_time("07:39") == "07:39:00"
+    assert ac.normalize_time("07:39:23") == "07:39:23"
+    for bad_time in ["7:39:23", "07:39", "07:39:2"]:
+        try:
+            ac.normalize_time(bad_time)
+            assert False, "should have failed: " + bad_time
+        except ValueError:
+            pass
     assert ac.normalize_code("308590") == "308590"
     for bad in ["30859", "3085900", "abcdef"]:
         try:

@@ -10,6 +10,7 @@ This module has no GUI dependency so it can be unit tested on its own.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
@@ -119,6 +120,12 @@ def normalize_date(text: str, jalali: bool) -> str:
     ورودی تاریخ را (شمسی یا میلادی) گرفته و تاریخ میلادی به صورت YYYY-MM-DD برمی‌گرداند.
     Take a date string (Jalali or Gregorian) and return Gregorian YYYY-MM-DD.
     """
+    text = (text or "").strip()
+    expected = "YYYY/MM/DD" if jalali else "YYYY-MM-DD"
+    pattern = r"^\d{4}/\d{2}/\d{2}$" if jalali else r"^\d{4}-\d{2}-\d{2}$"
+    if not re.fullmatch(pattern, text):
+        raise ValueError(f"قالب تاریخ باید {expected} باشد")
+
     y, m, d = _split_date(text)
     if jalali:
         gy, gm, gd = jalali_to_gregorian(y, m, d)
@@ -140,13 +147,13 @@ def gregorian_str_to_jalali_str(date_str: str) -> str:
 
 
 def normalize_time(text: str) -> str:
-    """زمان را به صورت HH:MM:SS استاندارد می‌کند. HH:MM هم پذیرفته می‌شود."""
+    """زمان را با قالب دقیق HH:MM:SS اعتبارسنجی می‌کند."""
     text = (text or "").strip()
     if not text:
         raise ValueError("ساعت را وارد کنید")
+    if not re.fullmatch(r"\d{2}:\d{2}:\d{2}", text):
+        raise ValueError("قالب ساعت باید HH:MM:SS باشد (مثال: 07:39:23)")
     parts = text.split(":")
-    if len(parts) == 2:
-        parts.append("0")
     if len(parts) != 3:
         raise ValueError("قالب ساعت باید HH:MM:SS باشد (مثال: 07:39:23)")
     try:

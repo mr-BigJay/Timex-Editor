@@ -1,6 +1,5 @@
 @echo off
-chcp 65001 >nul
+REM اجرا بدون پنجرهٔ CMD — از run.vbs استفاده می‌کند
 cd /d "%~dp0"
-python -m pip install -r requirements.txt -q 2>nul
-python attendance_app.py
-if errorlevel 1 pause
+wscript //nologo "%~dp0run.vbs"
+exit /b 0

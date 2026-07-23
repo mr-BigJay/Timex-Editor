@@ -14,7 +14,8 @@ Attendance (check-in/out) records manager.
 - دکمهٔ خروج برای بازگشت به حالت اولیه (کادر کشیدن و رها کردن).
 
 اجرا:
-    python3 attendance_app.py
+    python attendance_app.pyw
+    python -m app.attendance_app
 
 برای فعال شدن کشیدن‌ورها کردن (اختیاری):
     pip install tkinterdnd2

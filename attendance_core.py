@@ -218,8 +218,43 @@ def is_complete_time(text: str) -> bool:
     return len((text or "").strip()) == 8
 
 
-# ---------------------------------------------------------------------------
-# مدل رکورد
+# بازه‌های معمول ساعت ورود/خروج برای دکمه‌های میانبر
+ENTRY_TIME_RANGE = ("06:45:01", "06:59:59")
+EXIT_TIME_RANGE = ("14:01:01", "14:15:59")
+
+
+def _time_to_seconds(text: str) -> int:
+    h, m, s = map(int, text.split(":"))
+    return h * 3600 + m * 60 + s
+
+
+def _seconds_to_time(seconds: int) -> str:
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def random_time_between(start: str, end: str, rng=None) -> str:
+    """ساعت تصادفی بین دو مقدار (شامل هر دو انتها)."""
+    import random
+
+    if rng is None:
+        rng = random
+    lo = _time_to_seconds(start)
+    hi = _time_to_seconds(end)
+    return _seconds_to_time(rng.randint(lo, hi))
+
+
+def random_entry_time(rng=None) -> str:
+    """ساعت تصادفی ورود (معمولاً حوالی ۰۶:۴۵ تا ۰۶:۵۹)."""
+    return random_time_between(*ENTRY_TIME_RANGE, rng=rng)
+
+
+def random_exit_time(rng=None) -> str:
+    """ساعت تصادفی خروج (معمولاً حوالی ۱۴:۰۱ تا ۱۴:۱۵)."""
+    return random_time_between(*EXIT_TIME_RANGE, rng=rng)
+
 # Record model
 # ---------------------------------------------------------------------------
 @dataclass

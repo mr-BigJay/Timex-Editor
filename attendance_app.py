@@ -371,9 +371,40 @@ class AttendanceApp:
         date_box.pack(side="right", padx=8)
         self._bind_date_entry(self.date_entry)
 
-        time_box, self.time_entry, _ = field(row, "ساعت (hh:mm:ss)")
+        # ستون ساعت با دکمه‌های میانبر ورود/خروج
+        time_box = tk.Frame(row, bg=PANEL)
         time_box.pack(side="right", padx=8)
+
+        entry_time_btn = self._button(
+            time_box, "ورود", self._on_entry_time, bg=ACCENT, hover=ACCENT_HOVER
+        )
+        entry_time_btn.pack(pady=(0, 4))
+
+        tk.Label(
+            time_box,
+            text="ساعت (hh:mm:ss)",
+            bg=PANEL,
+            fg=MUTED,
+            font=("Segoe UI", 10),
+        ).pack(anchor="e")
+
+        self.time_entry = tk.Entry(
+            time_box,
+            bg=BG,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            font=("Segoe UI", 12),
+            justify="center",
+            width=16,
+        )
+        self.time_entry.pack(pady=(4, 0), ipady=5)
         self._bind_time_entry(self.time_entry)
+
+        exit_time_btn = self._button(
+            time_box, "خروج", self._on_exit_time, bg="#7c3aed", hover="#6d28d9"
+        )
+        exit_time_btn.pack(pady=(4, 0))
 
         # گزینهٔ تاریخ شمسی
         self.jalali_var = tk.BooleanVar(value=False)
@@ -524,6 +555,21 @@ class AttendanceApp:
         self.status_lbl.config(
             text=f"مجموع رکوردها: {total}   |   اضافه‌شده: {added}{star}"
         )
+
+    def _set_time_value(self, time_str: str):
+        """قرار دادن ساعت در فیلد بدون تداخل با قالب‌بندی خودکار."""
+        self._updating_entry = True
+        try:
+            self.time_entry.delete(0, tk.END)
+            self.time_entry.insert(0, time_str)
+        finally:
+            self._updating_entry = False
+
+    def _on_entry_time(self):
+        self._set_time_value(ac.random_entry_time())
+
+    def _on_exit_time(self):
+        self._set_time_value(ac.random_exit_time())
 
     # ------------------------------------------------------------------ actions
     def _on_submit(self):

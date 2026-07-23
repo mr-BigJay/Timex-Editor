@@ -93,6 +93,18 @@ def test_to_line_roundtrip():
     print("OK to_line")
 
 
+def test_random_times():
+    import random
+
+    rng = random.Random(42)
+    entry = ac.random_entry_time(rng)
+    assert ac.ENTRY_TIME_RANGE[0] <= entry <= ac.ENTRY_TIME_RANGE[1]
+    exit_t = ac.random_exit_time(rng)
+    assert ac.EXIT_TIME_RANGE[0] <= exit_t <= ac.EXIT_TIME_RANGE[1]
+    assert ac._time_to_seconds("06:45:01") < ac._time_to_seconds("06:59:59")
+    print("OK random times")
+
+
 def test_read_write():
     content = (
         "   308590\t2026-06-22 07:12:45\t1\t0\t1\t0\n"
@@ -130,5 +142,6 @@ if __name__ == "__main__":
     test_parse_line()
     test_parse_line_normalizes()
     test_to_line_roundtrip()
+    test_random_times()
     test_read_write()
     print("\nهمه‌ی تست‌ها با موفقیت اجرا شدند / All tests passed")

@@ -4,7 +4,7 @@
 import os
 import tempfile
 
-import attendance_core as ac
+import app.attendance_core as ac
 
 
 def test_jalali_roundtrip():

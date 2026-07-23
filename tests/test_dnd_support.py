@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """تست‌های ماژول کشیدن و رها کردن."""
 
-import dnd_support as dnd
+import app.dnd_support as dnd
 
 
 def test_parse_tkdnd_data():

@@ -28,8 +28,8 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-import attendance_core as ac
-import dnd_support as dnd
+from app import attendance_core as ac
+from app import dnd_support as dnd
 
 dnd.init_dnd()
 DND_AVAILABLE = dnd.dnd_available()

@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+build/pyinstaller/
+dist/
+*.spec.bak
+launch_error.log
+*.log
+.venv/
+venv/
+TimexEditor.exe

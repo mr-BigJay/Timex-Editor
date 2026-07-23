@@ -1,6 +1,10 @@
 Set oWS = WScript.CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-appDir = fso.GetParentFolderName(WScript.ScriptFullName)
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+appDir = scriptDir
+If Not fso.FileExists(appDir & "\run.vbs") Then
+    appDir = fso.GetParentFolderName(scriptDir)
+End If
 sLink = oWS.SpecialFolders("Desktop") & "\Timex Editor.lnk"
 Set oLink = oWS.CreateShortcut(sLink)
 oLink.TargetPath = appDir & "\run.vbs"

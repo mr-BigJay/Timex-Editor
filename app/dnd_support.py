@@ -27,7 +27,7 @@ def init_dnd() -> bool:
         if _load_tkinterdnd2():
             return True
         try:
-            from win32_dnd import hook_dropfiles
+            from app.win32_dnd import hook_dropfiles
 
             _hook_dropfiles = hook_dropfiles
             DND_BACKEND = "win32"

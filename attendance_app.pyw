@@ -7,9 +7,13 @@ import sys
 import traceback
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 
 def _show_error(exc: BaseException) -> None:
-    log = Path(__file__).resolve().parent / "launch_error.log"
+    log = ROOT / "launch_error.log"
     log.write_text(traceback.format_exc(), encoding="utf-8")
     try:
         import tkinter as tk
@@ -28,7 +32,7 @@ def _show_error(exc: BaseException) -> None:
 
 if __name__ == "__main__":
     try:
-        from attendance_app import main
+        from app.attendance_app import main
 
         main()
     except Exception as e:

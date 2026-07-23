@@ -44,14 +44,16 @@ cd attendance-tool
 python3 attendance_app.py
 ```
 
-### فعال‌سازی «کشیدن و رها کردن» (اختیاری)
+### فعال‌سازی «کشیدن و رها کردن»
 
 ```bash
-pip install tkinterdnd2
+pip install -r requirements.txt
 ```
 
-اگر این کتابخانه نصب نباشد، برنامه همچنان کار می‌کند و برای انتخاب فایل روی کادر یا
-دکمهٔ «انتخاب فایل» کلیک می‌کنید.
+- **ویندوز:** `windnd` یا `tkinterdnd2`
+- **لینوکس/مک:** `tkinterdnd2`
+
+فایل `.dat` یا `.txt` را روی کل پنجره یا کادر وسط صفحه رها کنید.
 
 ### نصب tkinter (در صورت خطای «No module named tkinter»)
 

@@ -29,18 +29,14 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import attendance_core as ac
+import dnd_support as dnd
 
-# تلاش برای فعال‌سازی کشیدن و رها کردن (اختیاری)
-try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD  # type: ignore
-
-    DND_AVAILABLE = True
-except Exception:  # pragma: no cover - بستگی به محیط دارد
-    DND_AVAILABLE = False
+dnd.init_dnd()
+DND_AVAILABLE = dnd.dnd_available()
 
 
 APP_TITLE = "مدیریت رکوردهای ورود و خروج"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 
 BG = "#0f172a"
 PANEL = "#1e293b"
@@ -56,6 +52,7 @@ ADDED_BG = "#14532d"
 
 class AttendanceApp:
     def __init__(self, root: tk.Tk):
+        self.root = root
         self.root = root
         self.root.title(f"{APP_TITLE}  v{APP_VERSION}")
         self.root.geometry("1000x760")
@@ -74,6 +71,9 @@ class AttendanceApp:
         # کانتینری که بین «صفحهٔ کشیدن فایل» و «صفحهٔ ویرایش» جابه‌جا می‌شود
         self.container = tk.Frame(self.root, bg=BG)
         self.container.pack(fill="both", expand=True)
+
+        if dnd.DND_BACKEND == "windnd":
+            dnd.hook_windnd(self.root, self._on_dropped_paths)
 
         self.show_drop_screen()
 
@@ -248,7 +248,7 @@ class AttendanceApp:
             text=(
                 "یا روی دکمهٔ زیر کلیک کنید"
                 if DND_AVAILABLE
-                else "کشیدن‌ورها کردن نیازمند نصب tkinterdnd2 است"
+                else "برای کشیدن و رها کردن: pip install tkinterdnd2  (ویندوز: pip install windnd)"
             ),
             bg=PANEL,
             fg=MUTED,
@@ -263,18 +263,18 @@ class AttendanceApp:
         for w in (drop, icon, hint, note):
             w.bind("<Button-1>", lambda e: self._browse_open())
 
-        if DND_AVAILABLE:
-            drop.drop_target_register(DND_FILES)  # type: ignore[attr-defined]
-            drop.dnd_bind("<<Drop>>", self._on_drop)  # type: ignore[attr-defined]
+        if dnd.DND_BACKEND == "tkinterdnd2":
+            dnd.register_tkdnd_tree(self.root, self._on_drop)
+            dnd.register_tkdnd_tree(self.container, self._on_drop)
+            dnd.register_tkdnd_tree(wrap, self._on_drop)
+
+    def _on_dropped_paths(self, paths: list[str]):
+        if paths:
+            self._load_file(paths[0])
 
     def _on_drop(self, event):
-        path = event.data.strip()
-        # tkdnd مسیرهای دارای فاصله را داخل {} می‌گذارد
-        if path.startswith("{") and path.endswith("}"):
-            path = path[1:-1]
-        # اگر چند فایل رها شد، اولی را بگیر
-        path = path.split("} {")[0].strip("{}")
-        self._load_file(path)
+        paths = dnd.parse_tkdnd_data(event.data)
+        self._on_dropped_paths(paths)
 
     def _browse_open(self):
         path = filedialog.askopenfilename(
@@ -679,8 +679,8 @@ class AttendanceApp:
 
 
 def main():
-    if DND_AVAILABLE:
-        root = TkinterDnD.Tk()
+    if dnd.DND_BACKEND == "tkinterdnd2":
+        root = dnd.TkinterDnD.Tk()  # type: ignore[union-attr]
     else:
         root = tk.Tk()
     AttendanceApp(root)

@@ -83,4 +83,5 @@ python3 test_dnd_support.py
 - `test_dnd_support.py` — تست‌های کشیدن و رها کردن.
 - `attendance_app.pyw` — اجرای بدون CMD در ویندوز.
 - `run.vbs` / `run.bat` — لانچر ویندوز بدون پنجرهٔ سیاه.
+- `sample_records.txt` — نمونه فایل رکوردها برای آزمایش.
 - `requirements.txt` — وابستگی‌های کشیدن و رها کردن.

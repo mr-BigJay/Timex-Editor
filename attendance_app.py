@@ -36,15 +36,14 @@ DND_AVAILABLE = dnd.dnd_available()
 
 
 APP_TITLE = "مدیریت رکوردهای ورود و خروج"
-APP_VERSION = "2.1"
+APP_VERSION = "2.0"
 
-# پالت رنگی — مطابق mockup
+# پالت رنگی تم جدید
 BG = "#0B1120"
 PANEL = "#151F32"
-CARD_BORDER = "#0EA5E9"
+CARD_BORDER = "#2D3B55"
 ACCENT = "#0EA5E9"
 ACCENT_HOVER = "#0284C7"
-ACCENT_DARK = "#0369A1"
 TEXT = "#F1F5F9"
 MUTED = "#94A3B8"
 GOOD = "#22C55E"
@@ -53,17 +52,14 @@ DANGER = "#EF4444"
 DANGER_HOVER = "#DC2626"
 PURPLE = "#8B5CF6"
 PURPLE_HOVER = "#7C3AED"
-HILITE = "#1A2332"
-HEADER_BG = "#121A2B"
+HILITE = "#1E293B"
 ROW_ALT = "#1A2538"
-ADDED_BG = "#0EA5E9"
-ADDED_FG = "#FFFFFF"
+ADDED_BG = "#14532D"
+ADDED_FG = "#BBF7D0"
 FONT = ("Segoe UI", 10)
 FONT_BOLD = ("Segoe UI", 10, "bold")
-FONT_TITLE = ("Segoe UI", 13, "bold")
+FONT_TITLE = ("Segoe UI", 18, "bold")
 FONT_SECTION = ("Segoe UI", 11, "bold")
-FONT_BTN = ("Segoe UI", 11, "bold")
-FONT_BIG_BTN = ("Segoe UI", 12, "bold")
 
 
 class AttendanceApp:
@@ -120,29 +116,25 @@ class AttendanceApp:
             background=PANEL,
             foreground=TEXT,
             fieldbackground=PANEL,
-            rowheight=32,
+            rowheight=30,
             borderwidth=0,
             font=FONT,
         )
         style.configure(
             "Treeview.Heading",
             background=HILITE,
-            foreground=MUTED,
+            foreground=TEXT,
             font=FONT_BOLD,
             relief="flat",
-            padding=(10, 8),
+            padding=(8, 6),
         )
-        style.map(
-            "Treeview",
-            background=[("selected", ACCENT_DARK)],
-            foreground=[("selected", "white")],
-        )
-        style.configure("Vertical.TScrollbar", background=HILITE, troughcolor=BG, borderwidth=0, width=10)
+        style.map("Treeview", background=[("selected", ACCENT)], foreground=[("selected", "white")])
+        style.configure("Vertical.TScrollbar", background=HILITE, troughcolor=BG, borderwidth=0)
 
     def _card(self, parent, title: str, expand=False):
-        """کارت با حاشیهٔ آبی روشن مطابق mockup."""
+        """کارت با عنوان و حاشیهٔ ظریف."""
         outer = tk.Frame(parent, bg=BG)
-        outer.pack(fill="both" if expand else "x", padx=18, pady=(0, 8))
+        outer.pack(fill="both" if expand else "x", padx=20, pady=(0, 10))
         if expand:
             outer.pack_configure(expand=True)
 
@@ -150,62 +142,38 @@ class AttendanceApp:
         box.pack(fill="both", expand=expand)
 
         head = tk.Frame(box, bg=PANEL)
-        head.pack(fill="x", padx=16, pady=(12, 6))
+        head.pack(fill="x", padx=14, pady=(10, 4))
         tk.Label(head, text=title, bg=PANEL, fg=TEXT, font=FONT_SECTION).pack(anchor="e")
 
         body = tk.Frame(box, bg=PANEL)
-        body.pack(fill="both", expand=expand, padx=16, pady=(0, 14))
+        body.pack(fill="both", expand=expand, padx=14, pady=(0, 12))
         return outer, body
 
-    def _styled_entry(self, parent, width=16):
+    def _styled_entry(self, parent, width=14):
         return tk.Entry(
             parent,
-            bg="#0D1526",
+            bg=BG,
             fg=TEXT,
             insertbackground=TEXT,
             relief="flat",
-            font=("Segoe UI", 13),
+            font=("Segoe UI", 12),
             justify="center",
             width=width,
             highlightthickness=1,
-            highlightbackground="#334155",
+            highlightbackground=CARD_BORDER,
             highlightcolor=ACCENT,
         )
 
-    def _field(self, parent, label: str, width=16):
+    def _field(self, parent, label: str, width=14):
         box = tk.Frame(parent, bg=PANEL)
         lbl = tk.Label(box, text=label, bg=PANEL, fg=MUTED, font=FONT)
-        lbl.pack(anchor="e", padx=2)
+        lbl.pack(anchor="e")
         entry = self._styled_entry(box, width=width)
-        entry.pack(pady=(8, 0), ipady=8, fill="x")
+        entry.pack(pady=(6, 0), ipady=6, fill="x")
         return box, entry, lbl
 
-    def _action_button(self, parent, text, command, bg, hover=None, width=10):
-        return self._button(
-            parent,
-            text,
-            command,
-            bg=bg,
-            hover=hover,
-            width=width,
-            font=FONT_BIG_BTN,
-            padx=22,
-            pady=14,
-        )
     # ---------------------------------------------------------- helper widgets
-    def _button(
-        self,
-        parent,
-        text,
-        command,
-        bg=ACCENT,
-        fg="white",
-        width=None,
-        hover=None,
-        font=None,
-        padx=18,
-        pady=9,
-    ):
+    def _button(self, parent, text, command, bg=ACCENT, fg="white", width=None, hover=None, font=None):
         btn = tk.Button(
             parent,
             text=text,
@@ -216,10 +184,10 @@ class AttendanceApp:
             activeforeground="white",
             relief="flat",
             bd=0,
-            padx=padx,
-            pady=pady,
+            padx=18,
+            pady=9,
             cursor="hand2",
-            font=font or FONT_BTN,
+            font=font or FONT_BOLD,
         )
         if width:
             btn.configure(width=width)
@@ -397,37 +365,39 @@ class AttendanceApp:
     def show_editor_screen(self):
         self._clear_container()
 
-        # ── هدر: ذخیره (چپ) | مسیر فایل (وسط) | عنوان (راست) ─────────────
-        header = tk.Frame(self.container, bg=BG, pady=12)
-        header.pack(fill="x", padx=20)
-        header.columnconfigure(1, weight=1)
+        # ── هدر ──────────────────────────────────────────────────────────────
+        header = tk.Frame(self.container, bg=HILITE, height=56)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+
+        hdr_inner = tk.Frame(header, bg=HILITE)
+        hdr_inner.pack(fill="both", expand=True, padx=20)
+
+        right = tk.Frame(hdr_inner, bg=HILITE)
+        right.pack(side="right", fill="y", pady=10)
+        tk.Label(right, text="🕐", bg=HILITE, fg=ACCENT, font=("Segoe UI", 16)).pack(
+            side="right", padx=(0, 8)
+        )
+        tk.Label(right, text=APP_TITLE, bg=HILITE, fg=TEXT, font=FONT_SECTION).pack(side="right")
+        tk.Label(
+            right, text=f"  v{APP_VERSION}", bg=HILITE, fg=MUTED, font=("Segoe UI", 9)
+        ).pack(side="right", padx=(0, 12))
 
         self._button(
-            header, "ذخیره", self._on_save_as,
-            bg=GOOD, fg="#052E16", hover=GOOD_HOVER,
-            font=("Segoe UI", 12, "bold"), padx=28, pady=9,
-        ).grid(row=0, column=0, sticky="w")
+            hdr_inner, "ذخیره", self._on_save_as, bg=GOOD, hover=GOOD_HOVER
+        ).pack(side="left", pady=10)
 
-        path_text = f"فایل: {self.source_path}" if self.source_path else "فایل: —"
+        path_frame = tk.Frame(hdr_inner, bg=HILITE)
+        path_frame.pack(side="left", fill="x", expand=True, padx=20)
+        tk.Label(path_frame, text="فایل:", bg=HILITE, fg=MUTED, font=FONT).pack(side="left")
         tk.Label(
-            header, text=path_text, font=FONT,
-            bg=BG, fg=MUTED, anchor="center",
-        ).grid(row=0, column=1, sticky="ew", padx=16)
-
-        title_box = tk.Frame(header, bg=BG)
-        title_box.grid(row=0, column=2, sticky="e")
-        tk.Label(
-            title_box, text="🕐", font=("Segoe UI", 14),
-            bg=BG, fg=TEXT,
-        ).pack(side="right", padx=(0, 6))
-        tk.Label(
-            title_box, text=f"v{APP_VERSION}",
-            font=("Segoe UI", 10), bg=BG, fg=MUTED,
-        ).pack(side="right", padx=(0, 8), pady=(4, 0))
-        tk.Label(
-            title_box, text=APP_TITLE,
-            font=FONT_TITLE, bg=BG, fg=TEXT,
-        ).pack(side="right")
+            path_frame,
+            text=self.source_path or "",
+            bg=HILITE,
+            fg=TEXT,
+            font=FONT_BOLD,
+            anchor="w",
+        ).pack(side="left", padx=(6, 0))
 
         self.root.bind("<Control-s>", lambda e: self._on_save_as())
         self.root.bind("<Control-S>", lambda e: self._on_save_as())
@@ -435,63 +405,52 @@ class AttendanceApp:
         # ── فرم ثبت ──────────────────────────────────────────────────────
         _, form_body = self._card(self.container, "ثبت رکورد جدید")
 
-        # ردیف ۱: چک‌باکس + کد + تاریخ + ساعت (راست به چپ)
-        row1 = tk.Frame(form_body, bg=PANEL)
-        row1.pack(fill="x", pady=(0, 14))
+        row = tk.Frame(form_body, bg=PANEL)
+        row.pack(fill="x")
 
-        self.jalali_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(
-            row1, text="ورود تاریخ شمسی",
+        submit_box = tk.Frame(row, bg=PANEL)
+        submit_box.pack(side="left", padx=(0, 12), pady=4)
+        self._button(submit_box, "ثبت رکورد", self._on_submit, bg=GOOD, hover=GOOD_HOVER).pack(
+            pady=18
+        )
+
+        self.jalali_var = tk.BooleanVar(value=False)
+        jalali_chk = tk.Checkbutton(
+            row,
+            text="ورود تاریخ شمسی",
             variable=self.jalali_var,
             command=self._on_jalali_toggle,
-            font=FONT, bg=PANEL, fg=TEXT,
-            activebackground=PANEL, activeforeground=TEXT,
-            selectcolor="#0D1526", relief=tk.FLAT,
-        ).pack(side="right", padx=(0, 20), pady=(22, 0))
+            bg=PANEL,
+            fg=TEXT,
+            selectcolor=BG,
+            activebackground=PANEL,
+            activeforeground=TEXT,
+            font=FONT,
+        )
+        jalali_chk.pack(side="right", padx=12, pady=20)
 
-        code_box, self.code_entry, _ = self._field(row1, "کد پرسنلی (۶ رقم)", width=14)
-        code_box.pack(side="right", padx=(0, 16))
+        code_box, self.code_entry, _ = self._field(row, "کد پرسنلی (۶ رقم)")
+        code_box.pack(side="right", padx=8)
         self._bind_code_entry(self.code_entry)
 
-        date_box, self.date_entry, self.date_label = self._field(
-            row1, "تاریخ شمسی (yyyy/mm/dd)", width=16)
-        date_box.pack(side="right", padx=(0, 16))
+        date_box, self.date_entry, self.date_label = self._field(row, "تاریخ میلادی (yyyy-mm-dd)")
+        date_box.pack(side="right", padx=8)
         self._bind_date_entry(self.date_entry)
 
-        time_col = tk.Frame(row1, bg=PANEL)
-        time_col.pack(side="right")
-        tk.Label(
-            time_col, text="ساعت (hh:mm:ss)",
-            bg=PANEL, fg=MUTED, font=FONT,
-        ).pack(anchor="e")
-        self.time_entry = self._styled_entry(time_col, width=14)
-        self.time_entry.pack(anchor="e", pady=(8, 0), ipady=8)
-        self._bind_time_entry(self.time_entry)
-
-        # ردیف ۲: ثبت رکورد (چپ) | ورود + خروج (راست، دکمه‌های بزرگ)
-        row2 = tk.Frame(form_body, bg=PANEL)
-        row2.pack(fill="x", pady=(0, 8))
-
-        self._button(
-            row2, "ثبت رکورد", self._on_submit,
-            bg=GOOD, fg="#052E16", hover=GOOD_HOVER,
-            font=FONT_BIG_BTN, padx=24, pady=10,
-        ).pack(side="left")
-
-        btn_group = tk.Frame(row2, bg=PANEL)
-        btn_group.pack(side="right")
-        self._action_button(
-            btn_group, "ورود", self._on_entry_time, ACCENT, ACCENT_HOVER,
-        ).pack(side="right", padx=(10, 0))
-        self._action_button(
-            btn_group, "خروج", self._on_exit_time, PURPLE, PURPLE_HOVER,
-        ).pack(side="right")
-
-        self.date_hint = tk.Label(
-            form_body,
-            text="تاریخ شمسی هنگام ذخیره به میلادی تبدیل می‌شود.",
-            bg=PANEL, fg=MUTED, font=("Segoe UI", 9),
+        time_box = tk.Frame(row, bg=PANEL)
+        time_box.pack(side="right", padx=8)
+        self._button(time_box, "ورود", self._on_entry_time, bg=ACCENT, hover=ACCENT_HOVER).pack(
+            pady=(0, 4)
         )
+        tk.Label(time_box, text="ساعت (hh:mm:ss)", bg=PANEL, fg=MUTED, font=FONT).pack(anchor="e")
+        self.time_entry = self._styled_entry(time_box)
+        self.time_entry.pack(pady=(6, 0), ipady=6)
+        self._bind_time_entry(self.time_entry)
+        self._button(
+            time_box, "خروج", self._on_exit_time, bg=PURPLE, hover=PURPLE_HOVER
+        ).pack(pady=(4, 0))
+
+        self.date_hint = tk.Label(form_body, text="", bg=PANEL, fg=MUTED, font=("Segoe UI", 9))
         self.date_hint.pack(anchor="e", pady=(4, 0))
         self._update_date_hint()
 
@@ -501,15 +460,15 @@ class AttendanceApp:
 
         # ── موارد اضافه‌شده ────────────────────────────────────────────────
         _, added_body = self._card(self.container, "موارد اضافه‌شده در این نشست")
-        self.added_tree = self._make_tree(added_body, height=5, session=True)
-        self.added_tree.pack(fill="both", expand=True)
+        self.added_tree = self._make_tree(added_body, height=3)
+        self.added_tree.pack(fill="x")
 
         # ── همهٔ رکوردها ─────────────────────────────────────────────────
         _, list_body = self._card(self.container, "همهٔ رکوردها", expand=True)
         tree_wrap = tk.Frame(list_body, bg=PANEL)
         tree_wrap.pack(fill="both", expand=True)
 
-        self.tree = self._make_tree(tree_wrap, height=12)
+        self.tree = self._make_tree(tree_wrap, height=14)
         vsb = ttk.Scrollbar(tree_wrap, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
         vsb.pack(side="left", fill="y")
@@ -528,7 +487,7 @@ class AttendanceApp:
         self._render_all()
         self.code_entry.focus_set()
 
-    def _make_tree(self, parent, height, session=False):
+    def _make_tree(self, parent, height):
         cols = ("row", "code", "date", "jalali", "time", "info")
         tree = ttk.Treeview(parent, columns=cols, show="headings", height=height)
         tree.heading("row", text="#")
@@ -537,16 +496,13 @@ class AttendanceApp:
         tree.heading("jalali", text="تاریخ شمسی")
         tree.heading("time", text="ساعت")
         tree.heading("info", text="ستون‌های اضافی")
-        tree.column("row", width=48, anchor="center", stretch=False)
-        tree.column("code", width=108, anchor="center", stretch=False)
-        tree.column("date", width=118, anchor="center", stretch=False)
-        tree.column("jalali", width=118, anchor="center", stretch=False)
-        tree.column("time", width=96, anchor="center", stretch=False)
-        tree.column("info", width=160, anchor="center", stretch=True)
-        if session:
-            tree.tag_configure("added", background=ADDED_BG, foreground=ADDED_FG)
-        else:
-            tree.tag_configure("added", background=ACCENT_DARK, foreground="white")
+        tree.column("row", width=44, anchor="center", stretch=False)
+        tree.column("code", width=100, anchor="center", stretch=False)
+        tree.column("date", width=110, anchor="center", stretch=False)
+        tree.column("jalali", width=110, anchor="center", stretch=False)
+        tree.column("time", width=90, anchor="center", stretch=False)
+        tree.column("info", width=140, anchor="center", stretch=True)
+        tree.tag_configure("added", background=ADDED_BG, foreground=ADDED_FG)
         tree.tag_configure("odd", background=ROW_ALT)
         tree.tag_configure("even", background=PANEL)
         return tree
@@ -554,10 +510,12 @@ class AttendanceApp:
     def _update_date_hint(self):
         if self.jalali_var.get():
             self.date_label.config(text="تاریخ شمسی (yyyy/mm/dd)")
-            self.date_hint.config(text="تاریخ شمسی هنگام ذخیره به میلادی تبدیل می‌شود.")
+            self.date_hint.config(
+                text="قالب پیش‌فرض شمسی: yyyy/mm/dd  (مثال: 1405/04/01)  ← هنگام ذخیره به میلادی تبدیل می‌شود"
+            )
         else:
             self.date_label.config(text="تاریخ میلادی (yyyy-mm-dd)")
-            self.date_hint.config(text="تاریخ به صورت میلادی ذخیره می‌شود.")
+            self.date_hint.config(text="قالب پیش‌فرض میلادی: yyyy-mm-dd  (مثال: 2026-06-22)")
 
     # ---------------------------------------------------------------- rendering
     def _render_all(self):

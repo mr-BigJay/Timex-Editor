@@ -279,6 +279,28 @@ class Record:
         fields.extend(self.extra)
         return "\t".join(fields)
 
+    def output_line(self, line_prefix: str = "", default_extra: Optional[List[str]] = None) -> str:
+        """خط خروجی با حفظ قالب فایل اصلی برای رکوردهای موجود."""
+        if self.raw and not self.added:
+            return self.raw
+        extra = self.extra if self.extra else (default_extra or [])
+        fields = [self.code, f"{self.date} {self.time}"]
+        fields.extend(extra)
+        return f"{line_prefix}{'\t'.join(fields)}"
+
+
+def detect_output_format(records: List[Record]) -> tuple[str, List[str]]:
+    """استخراج پیشوند خط و ستون‌های پیش‌فرض اضافی از فایل ورودی."""
+    line_prefix = ""
+    default_extra: List[str] = []
+    for rec in records:
+        if rec.raw:
+            stripped = rec.raw.lstrip(" \t")
+            line_prefix = rec.raw[: len(rec.raw) - len(stripped)]
+            if rec.extra:
+                default_extra = list(rec.extra)
+            break
+    return line_prefix, default_extra
 
 def parse_line(line: str) -> Optional[Record]:
     """
@@ -353,10 +375,11 @@ def read_records(path: str) -> List[Record]:
 
 
 def write_records(path: str, records: List[Record]) -> None:
-    """نوشتن همه رکوردها در فایل مقصد."""
+    """نوشتن همه رکوردها در فایل مقصد با حفظ قالب خطوط اصلی."""
+    line_prefix, default_extra = detect_output_format(records)
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         for rec in records:
-            fh.write(rec.to_line() + "\n")
+            fh.write(rec.output_line(line_prefix, default_extra) + "\n")
 
 
 RECORD_EXTENSIONS = (".dat", ".txt")

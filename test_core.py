@@ -105,6 +105,30 @@ def test_random_times():
     print("OK random times")
 
 
+def test_preserve_raw_on_write():
+    content = "   308590\t2026-06-22 07:12:45\t1\t0\t1\t0\n"
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "records.dat")
+        with open(src, "w", encoding="utf-8") as f:
+            f.write(content)
+        recs = ac.read_records(src)
+        recs.append(
+            ac.Record(
+                code="999999",
+                date="2026-06-28",
+                time="08:00:00",
+                added=True,
+            )
+        )
+        out = os.path.join(d, "out.dat")
+        ac.write_records(out, recs)
+        with open(out, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        assert lines[0] == "   308590\t2026-06-22 07:12:45\t1\t0\t1\t0"
+        assert lines[1] == "   999999\t2026-06-28 08:00:00\t1\t0\t1\t0"
+    print("OK preserve raw on write")
+
+
 def test_read_write():
     content = (
         "   308590\t2026-06-22 07:12:45\t1\t0\t1\t0\n"
@@ -143,5 +167,6 @@ if __name__ == "__main__":
     test_parse_line_normalizes()
     test_to_line_roundtrip()
     test_random_times()
+    test_preserve_raw_on_write()
     test_read_write()
     print("\nهمه‌ی تست‌ها با موفقیت اجرا شدند / All tests passed")

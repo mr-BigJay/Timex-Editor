@@ -114,6 +114,11 @@ def test_read_write():
         # مسیر پیشنهادی
         sp = ac.suggested_save_path(src)
         assert sp.endswith("records_edited.txt")
+        dat_src = os.path.join(d, "records.dat")
+        assert ac.suggested_save_path(dat_src).endswith("records_edited.dat")
+        assert ac.default_save_extension(dat_src) == ".dat"
+        assert ac.default_save_extension("") == ".dat"
+        assert ac.default_save_extension(src) == ".txt"
     print("OK read/write")
 
 

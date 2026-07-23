@@ -279,7 +279,7 @@ class AttendanceApp:
     def _browse_open(self):
         path = filedialog.askopenfilename(
             title="انتخاب فایل رکوردها",
-            filetypes=[("فایل متنی", "*.txt"), ("همهٔ فایل‌ها", "*.*")],
+            filetypes=ac.RECORD_FILETYPES,
         )
         if path:
             self._load_file(path)
@@ -604,12 +604,13 @@ class AttendanceApp:
             else os.getcwd()
         )
         initial_file = os.path.basename(ac.suggested_save_path(self.source_path or ""))
+        default_ext = ac.default_save_extension(self.source_path or "")
         path = filedialog.asksaveasfilename(
             title="ذخیره",
             initialdir=initial_dir,
             initialfile=initial_file,
-            defaultextension=".txt",
-            filetypes=[("فایل متنی", "*.txt"), ("همهٔ فایل‌ها", "*.*")],
+            defaultextension=default_ext,
+            filetypes=ac.RECORD_FILETYPES,
         )
         if path:
             self._write_records_to(path)

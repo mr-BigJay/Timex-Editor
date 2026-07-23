@@ -324,16 +324,36 @@ def write_records(path: str, records: List[Record]) -> None:
             fh.write(rec.to_line() + "\n")
 
 
+RECORD_EXTENSIONS = (".dat", ".txt")
+
+# الگوی فیلتر فایل برای دیالوگ‌های باز/ذخیره در رابط گرافیکی
+RECORD_FILETYPES = [
+    ("فایل رکورد (.dat / .txt)", "*.dat;*.txt"),
+    ("DAT", "*.dat"),
+    ("TXT", "*.txt"),
+    ("همهٔ فایل‌ها", "*.*"),
+]
+
+
+def default_save_extension(source_path: str) -> str:
+    """پسوند پیش‌فرض ذخیره بر اساس فایل مبدأ (در غیر این صورت .dat)."""
+    if source_path:
+        ext = os.path.splitext(source_path)[1].lower()
+        if ext in RECORD_EXTENSIONS:
+            return ext
+    return ".dat"
+
+
 def suggested_save_path(source_path: str) -> str:
     """
     مسیر پیشنهادی برای ذخیره کنار فایل اصلی.
     Suggested save path right next to the original file.
     """
     if not source_path:
-        return "attendance_records.txt"
+        return "attendance_records.dat"
     folder = os.path.dirname(os.path.abspath(source_path))
     base = os.path.basename(source_path)
     name, ext = os.path.splitext(base)
-    if not ext:
-        ext = ".txt"
+    if ext.lower() not in RECORD_EXTENSIONS:
+        ext = default_save_extension(source_path)
     return os.path.join(folder, f"{name}_edited{ext}")

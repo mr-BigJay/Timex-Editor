@@ -5,12 +5,12 @@ import dnd_support as dnd
 
 
 def test_parse_tkdnd_data():
-    assert dnd.parse_tkdnd_data(r"C:\data\file.dat") == [r"C:\data\file.dat"]
-    assert dnd.parse_tkdnd_data(r"{C:\my files\a.dat} {C:\b.dat}") == [
+    assert dnd._parse_tkdnd_manual(r"C:\data\file.dat") == [r"C:\data\file.dat"]
+    assert dnd._parse_tkdnd_manual(r"{C:\my files\a.dat} {C:\b.dat}") == [
         r"C:\my files\a.dat",
         r"C:\b.dat",
     ]
-    assert dnd.parse_tkdnd_data("/home/user/file.txt") == ["/home/user/file.txt"]
+    assert dnd.parse_tkdnd_data(None, "/home/user/file.txt") == ["/home/user/file.txt"]
     print("OK parse tkdnd data")
 
 

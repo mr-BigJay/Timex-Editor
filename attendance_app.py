@@ -36,7 +36,7 @@ DND_AVAILABLE = dnd.dnd_available()
 
 
 APP_TITLE = "مدیریت رکوردهای ورود و خروج"
-APP_VERSION = "1.2"
+APP_VERSION = "1.3"
 
 BG = "#0f172a"
 PANEL = "#1e293b"
@@ -52,7 +52,6 @@ ADDED_BG = "#14532d"
 
 class AttendanceApp:
     def __init__(self, root: tk.Tk):
-        self.root = root
         self.root = root
         self.root.title(f"{APP_TITLE}  v{APP_VERSION}")
         self.root.geometry("1000x760")
@@ -72,10 +71,24 @@ class AttendanceApp:
         self.container = tk.Frame(self.root, bg=BG)
         self.container.pack(fill="both", expand=True)
 
-        if dnd.DND_BACKEND == "windnd":
-            dnd.hook_windnd(self.root, self._on_dropped_paths)
-
         self.show_drop_screen()
+        self.root.update_idletasks()
+        self.root.after(200, self._setup_dnd)
+
+    def _setup_dnd(self):
+        """فعال‌سازی کشیدن و رها کردن پس از نمایش کامل پنجره."""
+        dnd.hook_root_dnd(self.root, self._on_dropped_paths)
+        self._update_dnd_status()
+
+    def _update_dnd_status(self):
+        if hasattr(self, "dnd_status_lbl"):
+            if dnd.dnd_available():
+                self.dnd_status_lbl.config(text=f"کشیدن و رها کردن: {dnd.DND_STATUS}", fg=GOOD)
+            else:
+                self.dnd_status_lbl.config(
+                    text="کشیدن و رها کردن غیرفعال — pip install tkinterdnd2",
+                    fg=DANGER,
+                )
 
     # ------------------------------------------------------------------ style
     def _setup_style(self):
@@ -233,7 +246,7 @@ class AttendanceApp:
         hint = tk.Label(
             drop,
             text=(
-                "فایل را اینجا رها کنید"
+                "فایل .dat یا .txt را اینجا رها کنید"
                 if DND_AVAILABLE
                 else "برای انتخاب فایل کلیک کنید"
             ),
@@ -248,13 +261,23 @@ class AttendanceApp:
             text=(
                 "یا روی دکمهٔ زیر کلیک کنید"
                 if DND_AVAILABLE
-                else "برای کشیدن و رها کردن: pip install tkinterdnd2  (ویندوز: pip install windnd)"
+                else "برای فعال‌سازی: pip install tkinterdnd2"
             ),
             bg=PANEL,
             fg=MUTED,
             font=("Segoe UI", 10),
         )
         note.pack(pady=(4, 0))
+
+        self.dnd_status_lbl = tk.Label(
+            wrap,
+            text="",
+            bg=BG,
+            fg=MUTED,
+            font=("Segoe UI", 9),
+        )
+        self.dnd_status_lbl.pack(pady=(0, 6))
+        self._update_dnd_status()
 
         browse = self._button(wrap, "انتخاب فایل", self._browse_open)
         browse.pack(pady=18)
@@ -264,17 +287,11 @@ class AttendanceApp:
             w.bind("<Button-1>", lambda e: self._browse_open())
 
         if dnd.DND_BACKEND == "tkinterdnd2":
-            dnd.register_tkdnd_tree(self.root, self._on_drop)
-            dnd.register_tkdnd_tree(self.container, self._on_drop)
-            dnd.register_tkdnd_tree(wrap, self._on_drop)
+            self.root.after(50, self._setup_dnd)
 
     def _on_dropped_paths(self, paths: list[str]):
         if paths:
             self._load_file(paths[0])
-
-    def _on_drop(self, event):
-        paths = dnd.parse_tkdnd_data(event.data)
-        self._on_dropped_paths(paths)
 
     def _browse_open(self):
         path = filedialog.askopenfilename(
@@ -679,11 +696,12 @@ class AttendanceApp:
 
 
 def main():
+    # در ویندوز از tk.Tk معمولی + win32_dnd استفاده می‌شود (پایدارتر)
     if dnd.DND_BACKEND == "tkinterdnd2":
         root = dnd.TkinterDnD.Tk()  # type: ignore[union-attr]
     else:
         root = tk.Tk()
-    AttendanceApp(root)
+    app = AttendanceApp(root)
     root.mainloop()
 
 

@@ -22,8 +22,10 @@ def init_dnd() -> bool:
     """بارگذاری بهترین روش موجود برای کشیدن و رها کردن."""
     global DND_BACKEND, DND_FILES, TkinterDnD, _hook_dropfiles, DND_STATUS
 
-    # ویندوز: ابتدا روش بومی (بدون pip)
+    # ویندوز: tkinterdnd2 پایدارتر است؛ سپس win32_dnd بومی
     if sys.platform == "win32":
+        if _load_tkinterdnd2():
+            return True
         try:
             from win32_dnd import hook_dropfiles
 
@@ -42,24 +44,24 @@ def init_dnd() -> bool:
             return True
         except Exception:
             pass
-
-    # سایر سیستم‌ها یا fallback: tkinterdnd2
-    if _load_tkinterdnd2():
-        return True
-
-    if _try_pip_install("tkinterdnd2") and _load_tkinterdnd2():
-        return True
-
-    if sys.platform == "win32" and _try_pip_install("windnd"):
-        try:
-            import windnd as w
-
-            _hook_dropfiles = w.hook_dropfiles
-            DND_BACKEND = "windnd"
-            DND_STATUS = "فعال (windnd)"
+        if _try_pip_install("tkinterdnd2") and _load_tkinterdnd2():
             return True
-        except Exception:
-            pass
+        if _try_pip_install("windnd"):
+            try:
+                import windnd as w
+
+                _hook_dropfiles = w.hook_dropfiles
+                DND_BACKEND = "windnd"
+                DND_STATUS = "فعال (windnd)"
+                return True
+            except Exception:
+                pass
+
+    # لینوکس/مک
+    elif _load_tkinterdnd2():
+        return True
+    elif _try_pip_install("tkinterdnd2") and _load_tkinterdnd2():
+        return True
 
     DND_BACKEND = None
     DND_STATUS = "غیرفعال — pip install tkinterdnd2"

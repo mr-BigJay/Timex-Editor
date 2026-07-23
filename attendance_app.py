@@ -36,7 +36,7 @@ DND_AVAILABLE = dnd.dnd_available()
 
 
 APP_TITLE = "مدیریت رکوردهای ورود و خروج"
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 
 BG = "#0f172a"
 PANEL = "#1e293b"
